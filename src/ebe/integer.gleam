@@ -17,9 +17,9 @@ pub fn sgn(number: Int) -> Int {
 
 /// Euclidean remainder
 pub fn rem(dividend: Int, by divisor: Int) -> Result(Int, Nil) {
-  case divisor |> int.compare(0) {
-    Eq -> Nil |> Error
-    _ -> {
+  case divisor == 0 {
+    True -> Nil |> Error
+    False -> {
       let remainder = dividend % divisor
       case remainder |> int.compare(0) {
         Lt -> divisor |> int.absolute_value |> int.add(remainder) |> Ok
@@ -120,28 +120,28 @@ pub fn exp(number: Int, by exponent: Int) -> Int {
 
 /// Integer logarithm
 pub fn log(number: Int, base: Int) -> Result(Int, Nil) {
-  case number, base |> int.compare(1) {
-    0, _ -> Ok(0)
-    _, Gt -> log_loop(number |> int.absolute_value, base, 0) |> Ok
-    _, _ -> Error(Nil)
+  case number, base > 1 {
+    0, True -> 0 |> Ok
+    _, True -> log_loop(number |> int.absolute_value, base, 0) |> Ok
+    _, _ -> Nil |> Error
   }
 }
 
 /// Integer logarithm - recursive function
 /// Assumes base > 1
 fn log_loop(number: Int, base: Int, exponent: Int) -> Int {
-  case number |> int.compare(base) {
-    Lt -> exponent
-    _ -> log_loop(number / base, base, exponent + 1)
+  case number < base {
+    True -> exponent
+    False -> log_loop(number / base, base, exponent + 1)
   }
 }
 
 /// p-adic representation
 /// returns #(exp, n) such that number == n * base ^ exp
 pub fn p_adic(number: Int, base: Int) -> Result(#(Int, Int), Nil) {
-  case number, base |> int.compare(1) {
-    0, _ -> #(0, 0) |> Ok
-    _, Gt -> p_adic_loop(number |> int.absolute_value, base, 0) |> Ok
+  case number, base > 1 {
+    0, True -> #(0, 0) |> Ok
+    _, True -> p_adic_loop(number |> int.absolute_value, base, 0) |> Ok
     _, _ -> Error(Nil)
   }
 }

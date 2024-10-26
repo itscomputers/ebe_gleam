@@ -149,12 +149,12 @@ pub fn floor_divide_int(rational: Rational, by number: Int) -> Result(Int, Nil) 
 
 /// Reduce a rational number modulo an integer
 pub fn modulo_int(rational: Rational, mod modulus: Int) -> Result(Rational, Nil) {
-  case modulus |> int.compare(1) {
-    Gt ->
+  case modulus > 1 {
+    True ->
       rational
       |> floor_divide_int(modulus)
       |> result.map(fn(floor) { rational |> subtract_int(floor * modulus) })
-    _ -> Error(Nil)
+    False -> Error(Nil)
   }
 }
 

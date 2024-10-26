@@ -1,4 +1,5 @@
-import ebe/primality.{type Primes}
+import ebe/primality
+import ebe/primality/iterator.{type Primes} as iter
 import gleam/bool
 import gleam/list
 import gleeunit
@@ -10,11 +11,11 @@ pub fn main() {
 
 pub fn next_prime_test() {
   let assert_next_prime = fn(primes: Primes, expected: Int) -> Primes {
-    primes.next |> should.equal(expected)
-    primes |> primality.advance
+    primes |> iter.next |> should.equal(expected)
+    primes |> iter.advance
   }
 
-  primality.primes()
+  iter.new()
   |> assert_next_prime(2)
   |> assert_next_prime(3)
   |> assert_next_prime(5)

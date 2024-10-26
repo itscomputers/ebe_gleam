@@ -1,7 +1,6 @@
 import ebe/integer
 import gleam/int
 import gleam/list
-import gleam/order.{Lt}
 import gleam/pair
 import gleeunit
 import gleeunit/should
@@ -32,8 +31,8 @@ pub fn div_rem_test() {
     let assert Ok(#(quo, rem)) = integer.div_rem(a, b)
     Ok(rem) |> should.equal(integer.rem(a, b))
     Ok(quo) |> should.equal(integer.div(a, b))
-    rem |> int.compare(0) |> should.not_equal(Lt)
-    rem |> int.compare(b |> int.absolute_value) |> should.equal(Lt)
+    { rem >= 0 } |> should.be_true
+    { rem < int.absolute_value(b) } |> should.be_true
     b * quo + rem |> should.equal(a)
   }
 
@@ -186,13 +185,8 @@ pub fn log_test() {
     let #(number, base) = tuple
     let assert Ok(exp) = integer.log(number, base)
 
-    integer.exp(base, exp)
-    |> int.compare(number)
-    |> should.equal(Lt)
-
-    integer.exp(base, exp + 1)
-    |> int.compare(number)
-    |> should.not_equal(Lt)
+    { integer.exp(base, exp) < number } |> should.be_true
+    { integer.exp(base, exp + 1) >= number } |> should.be_true
   }
 
   [#(57, 3), #(3982, 4), #(23_871, 5), #(60, 6), #(6, 2), #(99, 3), #(2398, 4)]
