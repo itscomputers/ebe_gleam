@@ -1,6 +1,9 @@
 //// Primality module
 
+import ebe/primality/algorithm
 import ebe/primality/iterator.{type Primes} as iter
+import ebe/primality/observation.{Prime}
+
 import gleam/list
 
 /// List of primes less than a number
@@ -18,6 +21,17 @@ fn primes_before_loop(
     prime if prime < number ->
       primes_before_loop(number, primes |> iter.advance, [prime, ..curr_list])
     _ -> curr_list |> list.reverse
+  }
+}
+
+/// Primality
+///   - deterministic result if number < 341_550_071_728_321 
+///   - probabilistic result otherwise
+///       - probability of incorrect classification < 4^(-10) for Miller-Rabin test
+pub fn is_prime(number: Int) -> Bool {
+  case number |> algorithm.primality_observation |> observation.concretize {
+    Prime -> True
+    _ -> False
   }
 }
 
