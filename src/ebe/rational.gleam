@@ -2,8 +2,7 @@
 
 import ebe/integer
 import gleam/int
-import gleam/order.{type Order, Eq, Gt, Lt}
-import gleam/result
+import gleam/order.{type Order, Lt}
 
 /// Rational type
 pub opaque type Rational {
@@ -17,7 +16,7 @@ pub fn new(
 ) -> Result(Rational, Nil) {
   case denominator {
     0 -> Error(Nil)
-    _ -> Rational(numerator, denominator) |> reduce |> Ok
+    _ -> frac(numerator, denominator) |> Ok
   }
 }
 
@@ -83,11 +82,16 @@ pub fn abs(rational: Rational) -> Rational {
 
 /// Build reciprocal of a rational number
 pub fn reciprocal(rational: Rational) -> Result(Rational, Nil) {
-  case rational.numer |> int.compare(0) {
-    Eq -> Error(Nil)
-    Lt -> Rational(-rational.denom, -rational.numer) |> Ok
-    Gt -> Rational(rational.denom, rational.numer) |> Ok
+  case rational.numer == 0 {
+    True -> Error(Nil)
+    False -> rational |> reciprocal_unsafe |> Ok
   }
+}
+
+/// Reciprocal - unsafe
+/// Assumes rational number is nonzero
+pub fn reciprocal_unsafe(rational: Rational) -> Rational {
+  Rational(rational.denom, rational.numer) |> reduce_sign
 }
 
 /// Add two rational numbers
@@ -111,7 +115,16 @@ pub fn multiply(rational: Rational, by other: Rational) -> Rational {
 
 /// Divide a rational number by another rational number
 pub fn divide(rational: Rational, by other: Rational) -> Result(Rational, Nil) {
-  other |> reciprocal |> result.map(fn(other) { multiply(rational, other) })
+  case other.numer == 0 {
+    True -> Nil |> Error
+    False -> rational |> divide_unsafe(by: other) |> Ok
+  }
+}
+
+/// Divide - unsafe
+/// Assumes other is nonzero
+pub fn divide_unsafe(rational: Rational, by other: Rational) -> Rational {
+  other |> reciprocal_unsafe |> multiply(rational)
 }
 
 /// Compare rational number to integer
@@ -138,32 +151,49 @@ pub fn multiply_int(rational: Rational, by number: Int) -> Rational {
 pub fn divide_int(rational: Rational, by number: Int) -> Result(Rational, Nil) {
   case number {
     0 -> Error(Nil)
-    _ -> Rational(rational.numer, rational.denom * number) |> reduce |> Ok
+    _ -> rational |> divide_int_unsafe(by: number) |> Ok
   }
+}
+
+/// Divide by an integer - unsafe
+/// Assumes number nonzero
+pub fn divide_int_unsafe(rational: Rational, by number: Int) -> Rational {
+  Rational(rational.numer, rational.denom * number) |> reduce
 }
 
 /// Floor division of rational number by an integer
 pub fn floor_divide_int(rational: Rational, by number: Int) -> Result(Int, Nil) {
-  rational |> divide_int(number) |> result.map(floor)
+  case number == 0 {
+    True -> Nil |> Error
+    False -> rational |> floor_divide_int_unsafe(by: number) |> Ok
+  }
+}
+
+/// Floor division by an integer - unsafe
+/// Assumes number nonzero
+pub fn floor_divide_int_unsafe(rational: Rational, by number: Int) -> Int {
+  rational |> divide_int_unsafe(by: number) |> floor
 }
 
 /// Reduce a rational number modulo an integer
 pub fn modulo_int(rational: Rational, mod modulus: Int) -> Result(Rational, Nil) {
   case modulus > 1 {
-    True ->
-      rational
-      |> floor_divide_int(modulus)
-      |> result.map(fn(floor) { rational |> subtract_int(floor * modulus) })
+    True -> rational |> modulo_int_unsafe(mod: modulus) |> Ok
     False -> Error(Nil)
   }
 }
 
+/// Reduce modulo an integer - unsafe
+/// Assumes modulus is > 1
+pub fn modulo_int_unsafe(rational: Rational, mod modulus: Int) -> Rational {
+  rational
+  |> floor_divide_int_unsafe(modulus)
+  |> fn(floor) { rational |> subtract_int(floor * modulus) }
+}
+
 /// Floor
 pub fn floor(rational: Rational) -> Int {
-  case integer.div(rational.numer, rational.denom) {
-    Ok(result) -> result
-    _ -> panic
-  }
+  integer.div(rational.numer, rational.denom)
 }
 
 /// Ceiling
@@ -182,6 +212,11 @@ pub fn round(rational: Rational) -> Int {
 /// Convert a rational number into reduced form
 fn reduce(rational: Rational) -> Rational {
   let gcd = integer.gcd(rational.numer, rational.denom)
+  Rational(rational.numer / gcd, rational.denom / gcd) |> reduce_sign
+}
+
+/// Convert a rational number to have positive denominator
+fn reduce_sign(rational: Rational) -> Rational {
   let sgn = integer.sgn(rational.denom)
-  Rational(sgn * rational.numer / gcd, sgn * rational.denom / gcd)
+  Rational(sgn * rational.numer, sgn * rational.denom)
 }

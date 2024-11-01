@@ -1,7 +1,9 @@
 import ebe/integer
+import ebe/primality
 import gleam/int
 import gleam/list
 import gleam/pair
+import gleam/set
 import gleeunit
 import gleeunit/should
 
@@ -15,22 +17,40 @@ pub fn rem_test() {
   69 |> integer.rem(-7) |> should.equal(Ok(6))
   -69 |> integer.rem(7) |> should.equal(Ok(1))
   -69 |> integer.rem(-7) |> should.equal(Ok(1))
+  60 |> integer.rem(0) |> should.equal(Error(Nil))
 }
 
-/// Division test
+/// Unsafe remainder test
+pub fn mod_test() {
+  69 |> integer.mod(7) |> should.equal(6)
+  69 |> integer.mod(-7) |> should.equal(6)
+  -69 |> integer.mod(7) |> should.equal(1)
+  -69 |> integer.mod(-7) |> should.equal(1)
+}
+
+/// Quotient test
+pub fn quo_test() {
+  69 |> integer.quo(7) |> should.equal(Ok(9))
+  69 |> integer.quo(-7) |> should.equal(Ok(-9))
+  -69 |> integer.quo(7) |> should.equal(Ok(-10))
+  -69 |> integer.quo(-7) |> should.equal(Ok(10))
+  60 |> integer.quo(0) |> should.equal(Error(Nil))
+}
+
+/// Unsafe quotient test
 pub fn div_test() {
-  69 |> integer.div(7) |> should.equal(Ok(9))
-  69 |> integer.div(-7) |> should.equal(Ok(-9))
-  -69 |> integer.div(7) |> should.equal(Ok(-10))
-  -69 |> integer.div(-7) |> should.equal(Ok(10))
+  69 |> integer.div(7) |> should.equal(9)
+  69 |> integer.div(-7) |> should.equal(-9)
+  -69 |> integer.div(7) |> should.equal(-10)
+  -69 |> integer.div(-7) |> should.equal(10)
 }
 
-/// Division with remainder test
-pub fn div_rem_test() {
-  let check_div_rem = fn(a: Int, b: Int) {
-    let assert Ok(#(quo, rem)) = integer.div_rem(a, b)
+/// Quotient with remainder test
+pub fn quo_rem_test() {
+  let check_quo_rem = fn(a: Int, b: Int) {
+    let assert Ok(#(quo, rem)) = integer.quo_rem(a, b)
+    Ok(quo) |> should.equal(integer.quo(a, b))
     Ok(rem) |> should.equal(integer.rem(a, b))
-    Ok(quo) |> should.equal(integer.div(a, b))
     { rem >= 0 } |> should.be_true
     { rem < int.absolute_value(b) } |> should.be_true
     b * quo + rem |> should.equal(a)
@@ -46,7 +66,31 @@ pub fn div_rem_test() {
     #(99, 66),
     #(2398, 129),
   ]
-  |> expand_examples_and_test(with: check_div_rem)
+  |> expand_examples_and_test(with: check_quo_rem)
+}
+
+/// Unsafe quotient with remainder test
+pub fn div_mod_test() {
+  let check_div_mod = fn(a: Int, b: Int) {
+    let #(quo, rem) = integer.div_mod(a, b)
+    quo |> should.equal(integer.div(a, b))
+    rem |> should.equal(integer.mod(a, b))
+    { rem >= 0 } |> should.be_true
+    { rem < int.absolute_value(b) } |> should.be_true
+    b * quo + rem |> should.equal(a)
+  }
+
+  [
+    #(69, 7),
+    #(57, 66),
+    #(3982, 6982),
+    #(23_871, 69_584),
+    #(60, 77),
+    #(6, 4),
+    #(99, 66),
+    #(2398, 129),
+  ]
+  |> expand_examples_and_test(with: check_div_mod)
 }
 
 /// Greatest common divisor test
@@ -165,6 +209,45 @@ pub fn bezout_test() {
   |> expand_examples_and_test(with: check_bezout)
 }
 
+/// Modular inverse test
+pub fn inv_mod_test() {
+  let check_inv_mod = fn(number, modulus) {
+    case modulus > 1, integer.gcd(number, modulus) {
+      True, 1 -> {
+        let assert Ok(inv) = number |> integer.inv_mod(mod: modulus)
+        { 0 < inv } |> should.be_true
+        { inv < modulus } |> should.be_true
+        integer.gcd(inv, modulus) |> should.equal(1)
+        { number * inv % modulus } |> should.equal(1)
+      }
+      _, _ ->
+        number |> integer.inv_mod(mod: modulus) |> should.equal(Error(Nil))
+    }
+  }
+  [
+    #(57, 66),
+    #(3982, 6982),
+    #(23_871, 69_584),
+    #(60, 77),
+    #(6, 4),
+    #(99, 66),
+    #(2398, 129),
+    #(498, 541),
+    #(2938, 31),
+    #(2038, 0),
+    #(2099, 1),
+    #(6908, -5),
+  ]
+  |> list.each(fn(tuple) { check_inv_mod(tuple.0, tuple.1) })
+}
+
+/// Modular inverse test - unsafe version
+pub fn unsafe_inv_mod_test() {
+  list.range(1, 30)
+  |> list.map(fn(number) { #(number, number |> integer.inv_mod_unsafe(31)) })
+  |> list.each(fn(tuple) { tuple.0 * tuple.1 % 31 |> should.equal(1) })
+}
+
 /// Exponentiation test
 pub fn exp_test() {
   integer.exp(5, 0) |> should.equal(1)
@@ -174,12 +257,72 @@ pub fn exp_test() {
   integer.exp(5, 4) |> should.equal(625)
 }
 
+/// Modular exponentiation test
+pub fn exp_mod_test() {
+  let check_exp_mod = fn(number, exp, modulus) {
+    case modulus > 1, exp < 0, integer.gcd(number, modulus) == 1 {
+      True, False, _ -> {
+        let assert Ok(power) = number |> integer.exp_mod(by: exp, mod: modulus)
+        integer.exp(number, exp) % modulus |> should.equal(power)
+      }
+      False, _, _ ->
+        number
+        |> integer.exp_mod(by: exp, mod: modulus)
+        |> should.equal(Error(Nil))
+      True, True, False ->
+        number
+        |> integer.exp_mod(by: exp, mod: modulus)
+        |> should.equal(Error(Nil))
+      True, True, True -> {
+        let assert Ok(power) = number |> integer.exp_mod(by: exp, mod: modulus)
+        let assert Ok(inv_power) =
+          number |> integer.exp_mod(by: -exp, mod: modulus)
+        power * inv_power % modulus |> should.equal(1)
+      }
+    }
+  }
+  [2938, 698, 198, 592, 44, 99]
+  |> list.flat_map(fn(number) {
+    [0, 1, 2, 3, 4, 5]
+    |> list.flat_map(fn(exp) { [#(number, exp), #(number, -exp)] })
+  })
+  |> list.flat_map(fn(tuple) {
+    [-5, 0, 1, 2, 3, 29, 30, 31, 32, 33]
+    |> list.map(fn(modulus) { #(tuple.0, tuple.1, modulus) })
+  })
+  |> list.each(fn(tuple) { check_exp_mod(tuple.0, tuple.1, tuple.2) })
+}
+
+/// Modular exponentation test - unsafe version
+pub fn exp_mod_unsafe_test() {
+  list.range(1, 30)
+  |> list.each(fn(number) {
+    number
+    |> integer.exp_mod_unsafe(by: 30, mod: 31)
+    |> should.equal(1)
+  })
+
+  list.range(1, 30)
+  |> list.each(fn(number) {
+    list.range(0, 10)
+    |> list.each(fn(exp) {
+      let power = number |> integer.exp_mod_unsafe(by: exp, mod: 31)
+      let inv_power = number |> integer.exp_mod_unsafe(by: -exp, mod: 31)
+      power * inv_power % 31 |> should.equal(1)
+    })
+  })
+}
+
 /// Integer logarithm test
 pub fn log_test() {
   integer.log(8, 2) |> should.equal(Ok(3))
   integer.log(9, 2) |> should.equal(Ok(3))
   integer.log(15, 2) |> should.equal(Ok(3))
   integer.log(16, 2) |> should.equal(Ok(4))
+  integer.log(0, 2) |> should.equal(Ok(1))
+  integer.log(5, 1) |> should.equal(Error(Nil))
+  integer.log(5, 0) |> should.equal(Error(Nil))
+  integer.log(5, -3) |> should.equal(Error(Nil))
 
   let check_log = fn(tuple: #(Int, Int)) {
     let #(number, base) = tuple
@@ -193,11 +336,49 @@ pub fn log_test() {
   |> list.each(check_log)
 }
 
+/// Unsafe integer logarithm test
+pub fn log_unsafe_test() {
+  integer.log_unsafe(8, 2) |> should.equal(3)
+  integer.log_unsafe(9, 2) |> should.equal(3)
+  integer.log_unsafe(15, 2) |> should.equal(3)
+  integer.log_unsafe(16, 2) |> should.equal(4)
+  integer.log_unsafe(0, 2) |> should.equal(1)
+
+  let check_log = fn(tuple: #(Int, Int)) {
+    let #(number, base) = tuple
+    let exp = integer.log_unsafe(number, base)
+
+    { integer.exp(base, exp) < number } |> should.be_true
+    { integer.exp(base, exp + 1) >= number } |> should.be_true
+  }
+
+  [#(57, 3), #(3982, 4), #(23_871, 5), #(60, 6), #(6, 2), #(99, 3), #(2398, 4)]
+  |> list.each(check_log)
+}
+
 /// p-adic test
 pub fn p_adic_test() {
+  96 |> integer.p_adic(-5) |> should.equal(Error(Nil))
+  96 |> integer.p_adic(0) |> should.equal(Error(Nil))
+  96 |> integer.p_adic(1) |> should.equal(Error(Nil))
+  96 |> integer.p_adic(2) |> should.equal(Ok(#(5, 3)))
+  96 |> integer.p_adic(3) |> should.equal(Ok(#(1, 32)))
+  96 |> integer.p_adic(4) |> should.equal(Ok(#(2, 6)))
+  96 |> integer.p_adic(5) |> should.equal(Ok(#(0, 96)))
+  96 |> integer.p_adic(6) |> should.equal(Ok(#(1, 16)))
+  96 |> integer.p_adic(7) |> should.equal(Ok(#(0, 96)))
+  96 |> integer.p_adic(8) |> should.equal(Ok(#(1, 12)))
+  96 |> integer.p_adic(9) |> should.equal(Ok(#(0, 96)))
+  96 |> integer.p_adic(10) |> should.equal(Ok(#(0, 96)))
+  96 |> integer.p_adic(11) |> should.equal(Ok(#(0, 96)))
+  96 |> integer.p_adic(12) |> should.equal(Ok(#(1, 8)))
+}
+
+/// Unsafe p-adic test
+pub fn p_adic_unsafe_test() {
   let check_p_adic = fn(tuple: #(Int, Int)) {
     let #(number, base) = tuple
-    let assert Ok(#(exp, rem)) = integer.p_adic(number, base)
+    let #(exp, rem) = integer.p_adic_unsafe(number, base)
     base |> integer.exp(exp) |> int.multiply(rem) |> should.equal(number)
   }
 
@@ -208,6 +389,108 @@ pub fn p_adic_test() {
   })
   |> list.map(fn(t) { #(t.2 * integer.exp(t.0, t.1), t.0) })
   |> list.each(check_p_adic)
+}
+
+/// Legendre symbol test
+pub fn legendre_symbol_test() {
+  let prime = 31
+  let numbers = list.range(1, 30)
+  let squares =
+    numbers
+    |> list.map(fn(number) { number * number % prime })
+    |> list.fold(from: set.new(), with: set.insert)
+  numbers
+  |> list.each(fn(value) {
+    value
+    |> integer.legendre_symbol(prime)
+    |> should.equal(case
+      squares
+      |> set.contains(value)
+    {
+      True -> 1
+      False -> -1
+    })
+  })
+}
+
+/// Jacobi symbol test
+pub fn jacobi_symbol_test() {
+  13
+  |> integer.jacobi_symbol(31)
+  |> should.equal(Ok(13 |> integer.legendre_symbol(31)))
+  13 |> integer.jacobi_symbol(30) |> should.equal(Error(Nil))
+  13 |> integer.jacobi_symbol(2) |> should.equal(Error(Nil))
+}
+
+/// Unsafe jacobi symbol test
+pub fn jacobi_symbol_unsafe_test() {
+  let odd = 15
+  let expected_values = [0, 1, 1, 0, 1, 0, 0, -1, 1, 0, 0, -1, 0, -1, -1]
+  list.range(0, odd - 1)
+  |> list.map(fn(number) { integer.jacobi_symbol_unsafe(number, odd) })
+  |> should.equal(expected_values)
+
+  primality.primes_before(1000)
+  |> list.drop(1)
+  |> list.each(fn(prime) {
+    list.range(0, prime - 1)
+    |> list.each(fn(number) {
+      integer.jacobi_symbol_unsafe(number, prime)
+      |> should.equal(integer.legendre_symbol(number, prime))
+    })
+  })
+}
+
+pub fn sqrt_test() {
+  list.range(-100, 100)
+  |> list.each(fn(number) {
+    case number, number |> integer.sqrt {
+      0, Ok(s) -> s |> should.equal(0)
+      1, Ok(s) -> s |> should.equal(1)
+      4, Ok(s) -> s |> should.equal(2)
+      9, Ok(s) -> s |> should.equal(3)
+      16, Ok(s) -> s |> should.equal(4)
+      25, Ok(s) -> s |> should.equal(5)
+      36, Ok(s) -> s |> should.equal(6)
+      49, Ok(s) -> s |> should.equal(7)
+      64, Ok(s) -> s |> should.equal(8)
+      81, Ok(s) -> s |> should.equal(9)
+      100, Ok(s) -> s |> should.equal(10)
+      _, Ok(s) -> {
+        { s * s < number } |> should.be_true
+        { integer.exp(s + 1, 2) > number } |> should.be_true
+      }
+      _, Error(Nil) -> Nil
+    }
+  })
+}
+
+pub fn sqrt_unsafe_test() {
+  list.range(-100, 100)
+  |> list.each(fn(number) {
+    integer.sqrt_unsafe(number * number)
+    |> should.equal(number |> int.absolute_value)
+  })
+}
+
+pub fn is_square_test() {
+  list.range(-100, 100)
+  |> list.each(fn(number) {
+    case number {
+      0 -> number |> integer.is_square |> should.be_true
+      1 -> number |> integer.is_square |> should.be_true
+      4 -> number |> integer.is_square |> should.be_true
+      9 -> number |> integer.is_square |> should.be_true
+      16 -> number |> integer.is_square |> should.be_true
+      25 -> number |> integer.is_square |> should.be_true
+      36 -> number |> integer.is_square |> should.be_true
+      49 -> number |> integer.is_square |> should.be_true
+      64 -> number |> integer.is_square |> should.be_true
+      81 -> number |> integer.is_square |> should.be_true
+      100 -> number |> integer.is_square |> should.be_true
+      _ -> number |> integer.is_square |> should.be_false
+    }
+  })
 }
 
 /// Expand a list of tuples to include swaps and all possible neg/pos combinations
