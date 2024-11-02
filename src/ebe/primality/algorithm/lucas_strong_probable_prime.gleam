@@ -7,6 +7,7 @@
 ////    - a list of random witnesses will incorrectly observe a number as probably prime
 ////      with probability less than (4 / 15) ^ witness_count
 
+import gleam/iterator.{type Iterator}
 import gleam/list
 
 import ebe/integer
@@ -21,6 +22,35 @@ pub opaque type Witness {
   Witness(seq: LucasSequence, delta: Int, jacobi: Int, upper: Int, strong: Bool)
 }
 
+pub fn observe_random(number: Int, count witness_count: Int) -> Observation {
+  number
+  |> observe(
+    by: witnesses(number)
+    |> iterator.take(witness_count)
+    |> iterator.to_list
+    |> list.map(fn(search) { search.witness }),
+  )
+}
+
+pub fn observe(number: Int, by witnesses: List(Witness)) -> Observation {
+  Undetermined |> observe_loop(number, witnesses)
+}
+
+/// Combined observation - recursive method
+fn observe_loop(
+  obs: Observation,
+  number: Int,
+  witnesses: List(Witness),
+) -> Observation {
+  case witnesses {
+    [] -> obs
+    [witness, ..rest] ->
+      obs
+      |> observation.combine_lazy(fn() { number |> observation(by: witness) })
+      |> observe_loop(number, rest)
+  }
+}
+
 /// Construct a witness for primality of number using Lucas values p, q
 pub fn witness(p: Int, q: Int, number: Int) -> Witness {
   Witness(lucas.new_mod_unsafe(p, q, mod: number), 0, 0, 0, False)
@@ -30,12 +60,7 @@ pub fn witness(p: Int, q: Int, number: Int) -> Witness {
 pub fn observation(number: Int, by witness: Witness) -> Observation {
   witness
   |> first_observation(number)
-  |> fn(obs) {
-    case obs |> observation.concrete {
-      True -> obs
-      False -> obs |> lucas_observation(witness, number)
-    }
-  }
+  |> observation.combine_lazy(fn() { witness |> lucas_observation(number) })
 }
 
 /// Early observation of two extreme cases:
@@ -44,30 +69,26 @@ pub fn observation(number: Int, by witness: Witness) -> Observation {
 fn first_observation(witness: Witness, number: Int) -> Observation {
   let divisors = number |> possible_divisors(witness.seq)
   Undetermined
-  |> observation.combine(case
-    divisors |> list.find(fn(value) { number == value })
-  {
-    Ok(_) -> Indeterminate
-    Error(Nil) -> Undetermined
+  |> observation.combine_lazy(fn() {
+    case divisors |> list.find(fn(value) { number == value }) {
+      Ok(_) -> Indeterminate
+      Error(Nil) -> Undetermined
+    }
   })
-  |> observation.combine(case
-    divisors |> list.find(fn(value) { number > value })
-  {
-    Ok(divisor) -> DivisorFound(divisor)
-    Error(Nil) -> Undetermined
+  |> observation.combine_lazy(fn() {
+    case divisors |> list.find(fn(value) { number > value }) {
+      Ok(divisor) -> DivisorFound(divisor)
+      Error(Nil) -> Undetermined
+    }
   })
 }
 
 /// Primary observation of primality of number by witness
-fn lucas_observation(
-  obs: Observation,
-  witness: Witness,
-  number: Int,
-) -> Observation {
+fn lucas_observation(witness: Witness, number: Int) -> Observation {
   let witness = witness |> setup(number)
   let q = witness |> q_value
   let witness = witness |> double |> set_jacobi(number)
-  obs
+  Undetermined
   |> observe_composite(witness, number, q, when: condition_u, or: Undetermined)
   |> observe_composite(witness, number, q, when: condition_v, or: Undetermined)
   |> observe_composite(witness, number, q, when: condition_q, or: ProbablePrime)
@@ -165,10 +186,13 @@ fn observe_composite(
   when condition: fn(Witness, Int, Int) -> Bool,
   or default: Observation,
 ) {
-  case witness |> condition(number, q) {
-    True -> Composite
-    False -> obs |> observation.combine(default)
-  }
+  obs
+  |> observation.combine_lazy(fn() {
+    case witness |> condition(number, q) {
+      True -> Composite
+      False -> default
+    }
+  })
 }
 
 /// Apply strong attribute to an observation
@@ -182,4 +206,29 @@ fn apply_strong(obs: Observation, witness: Witness) -> Observation {
 /// Extract Lucas Q-value from witness
 fn q_value(witness: Witness) -> Int {
   { witness.seq |> lucas.value }.q
+}
+
+type WitnessSearch {
+  WitnessSearch(number: Int, discriminant: Int, witness: Witness)
+}
+
+fn witnesses(number: Int) -> Iterator(WitnessSearch) {
+  iterator.iterate(witness_search(number, 5), next_search)
+  |> iterator.filter(fn(search) {
+    search.discriminant |> integer.jacobi_symbol_unsafe(search.number) == -1
+  })
+}
+
+fn next_search(search: WitnessSearch) -> WitnessSearch {
+  let sgn = search.discriminant |> integer.sgn
+  let discriminant = { search.discriminant + 2 * sgn } * sgn
+  witness_search(search.number, discriminant)
+}
+
+fn witness_search(number: Int, discriminant: Int) -> WitnessSearch {
+  WitnessSearch(
+    number,
+    discriminant,
+    witness(1, { 1 - discriminant } / 4, number),
+  )
 }

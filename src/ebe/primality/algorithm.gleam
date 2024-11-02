@@ -1,5 +1,7 @@
 /// Primality observation algorithms
 /// Observation for primality
+import ebe/integer
+import ebe/primality/algorithm/lucas_strong_probable_prime as lucas
 import ebe/primality/algorithm/miller_rabin
 import ebe/primality/observation.{
   type Observation, Composite, Indeterminate, Prime, Undetermined,
@@ -12,8 +14,10 @@ pub fn primality_observation(number: Int) -> Observation {
   |> apply(number, when: less_than_two, do: is(Indeterminate))
   |> apply(number, when: equals_two, do: is(Prime))
   |> apply(number, when: is_even, do: is(Composite))
+  |> apply(number, when: integer.is_square, do: is(Composite))
   |> apply_deterministic_miller_rabin(number)
   |> apply_random_miller_rabin(number)
+  |> apply_random_lucas(number)
 }
 
 /// Conditionally apply a new observation
@@ -24,20 +28,8 @@ fn apply(
   do get_observation: fn(Int) -> Observation,
 ) -> Observation {
   case condition(number) {
-    True -> obs |> combine_with(number, get_observation)
+    True -> obs |> observation.combine_lazy(fn() { number |> get_observation })
     False -> obs
-  }
-}
-
-/// Combine an observation with a new observation
-fn combine_with(
-  obs: Observation,
-  number: Int,
-  get_observation: fn(Int) -> Observation,
-) -> Observation {
-  case obs |> observation.concrete {
-    True -> obs
-    False -> obs |> observation.combine(number |> get_observation)
   }
 }
 
@@ -74,5 +66,12 @@ fn apply_deterministic_miller_rabin(
 /// Use the probabilistic Miller-Rabin test with 10 random witnesses
 ///   - incorrect with probability less than (1 / 4) ^ 10
 fn apply_random_miller_rabin(obs: Observation, number: Int) -> Observation {
-  obs |> combine_with(number, fn(n) { n |> miller_rabin.observe_random(10) })
+  obs
+  |> observation.combine_lazy(fn() { number |> miller_rabin.observe_random(10) })
+}
+
+/// Use the probabilistic Lucas strong probable prime test with 5 random witnesses
+///   - incorrect with probability less than (4 / 15) ^ 5
+fn apply_random_lucas(obs: Observation, number: Int) -> Observation {
+  obs |> observation.combine_lazy(fn() { number |> lucas.observe_random(10) })
 }

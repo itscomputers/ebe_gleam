@@ -57,7 +57,7 @@ fn observe_loop(
     [] -> obs
     [witness, ..rest] ->
       obs
-      |> observation.combine(number |> observation(by: witness))
+      |> observation.combine_lazy(fn() { number |> observation(by: witness) })
       |> observe_loop(number, rest)
   }
 }
@@ -69,7 +69,9 @@ pub fn observation(number: Int, by witness: Witness) -> Observation {
   case
     check
     |> prime_observation(when: 1)
-    |> observation.combine(check |> prime_observation(when: number - 1))
+    |> observation.combine_lazy(fn() {
+      check |> prime_observation(when: number - 1)
+    })
   {
     Undetermined -> observation_loop(number, check, witness, remaining: exp)
     observation -> observation

@@ -1,9 +1,10 @@
+import ebe/integer
 import ebe/primality
 import ebe/primality/algorithm/lucas_strong_probable_prime as lucas_primality
 import ebe/primality/algorithm/miller_rabin
 import ebe/primality/iterator.{type Primes} as iter
 import ebe/primality/observation.{
-  Composite, DivisorFound, Indeterminate, Prime, ProbablePrime,
+  type Observation, Composite, DivisorFound, Indeterminate, Prime, ProbablePrime,
   StrongProbablePrime, Undetermined,
 }
 
@@ -79,8 +80,46 @@ pub fn is_prime_test() {
   }
 }
 
+pub fn large_primes_miller_rabin_test() {
+  large_primes_test(fn(number) {
+    number |> miller_rabin.observe_random(count: 10)
+  })
+}
+
+pub fn large_primes_lucas_strong_probable_prime_test() {
+  large_primes_test(fn(number) {
+    number |> lucas_primality.observe_random(count: 10)
+  })
+}
+
+fn large_primes_test(observation_func: fn(Int) -> Observation) {
+  let primes = large_primes()
+  let assert Ok(lower) = primes |> list.first
+  let assert Ok(upper) = primes |> list.last
+
+  list.range(lower, upper)
+  |> list.filter(fn(number) { number % 2 == 1 && !integer.is_square(number) })
+  |> list.partition(fn(number) { primes |> list.contains(number) })
+  |> fn(tuple) {
+    tuple.0
+    |> list.each(fn(number) {
+      number
+      |> observation_func
+      |> observation.concretize
+      |> should.equal(Prime)
+    })
+    tuple.1
+    |> list.each(fn(number) {
+      number
+      |> observation_func
+      |> observation.concretize
+      |> should.equal(Composite)
+    })
+  }
+}
+
 pub fn reduce_observations_test() {
-  [
+  let observations = [
     #([Composite, Prime, StrongProbablePrime, ProbablePrime], Composite),
     #([Prime, Composite, StrongProbablePrime, ProbablePrime], Prime),
     #([Prime, StrongProbablePrime, Composite, ProbablePrime], Prime),
@@ -92,10 +131,32 @@ pub fn reduce_observations_test() {
     #([ProbablePrime, StrongProbablePrime], StrongProbablePrime),
     #([ProbablePrime, ProbablePrime], ProbablePrime),
   ]
+
+  observations
   |> list.each(fn(tuple) {
     tuple.0 |> observation.reduce |> should.equal(tuple.1)
     [Undetermined, ..tuple.0] |> observation.reduce |> should.equal(tuple.1)
   })
+
+  observations
+  |> list.map(fn(tuple) {
+    #(tuple.0 |> list.map(fn(obs) { fn() { obs } }), tuple.1)
+  })
+  |> list.each(fn(tuple) {
+    tuple.0 |> observation.reduce_lazy |> should.equal(tuple.1)
+    [fn() { Undetermined }, ..tuple.0]
+    |> observation.reduce_lazy
+    |> should.equal(tuple.1)
+  })
+}
+
+pub fn reduce_observations_lazy_test() {
+  [Composite, Prime, StrongProbablePrime, ProbablePrime]
+  |> list.map(fn(obs) { fn() { obs } })
+  |> list.fold(from: Undetermined, with: fn(acc, obs) {
+    acc |> observation.combine_lazy(obs)
+  })
+  |> should.equal(Composite)
 }
 
 pub fn miller_rabin_test() {
