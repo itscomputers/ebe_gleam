@@ -1,9 +1,7 @@
 import ebe/integer
-import ebe/primality
 import gleam/int
 import gleam/list
 import gleam/pair
-import gleam/set
 import gleeunit
 import gleeunit/should
 
@@ -209,45 +207,6 @@ pub fn bezout_test() {
   |> expand_examples_and_test(with: check_bezout)
 }
 
-/// Modular inverse test
-pub fn inv_mod_test() {
-  let check_inv_mod = fn(number, modulus) {
-    case modulus > 1, integer.gcd(number, modulus) {
-      True, 1 -> {
-        let assert Ok(inv) = number |> integer.inv_mod(mod: modulus)
-        { 0 < inv } |> should.be_true
-        { inv < modulus } |> should.be_true
-        integer.gcd(inv, modulus) |> should.equal(1)
-        { number * inv % modulus } |> should.equal(1)
-      }
-      _, _ ->
-        number |> integer.inv_mod(mod: modulus) |> should.equal(Error(Nil))
-    }
-  }
-  [
-    #(57, 66),
-    #(3982, 6982),
-    #(23_871, 69_584),
-    #(60, 77),
-    #(6, 4),
-    #(99, 66),
-    #(2398, 129),
-    #(498, 541),
-    #(2938, 31),
-    #(2038, 0),
-    #(2099, 1),
-    #(6908, -5),
-  ]
-  |> list.each(fn(tuple) { check_inv_mod(tuple.0, tuple.1) })
-}
-
-/// Modular inverse test - unsafe version
-pub fn unsafe_inv_mod_test() {
-  list.range(1, 30)
-  |> list.map(fn(number) { #(number, number |> integer.inv_mod_unsafe(31)) })
-  |> list.each(fn(tuple) { tuple.0 * tuple.1 % 31 |> should.equal(1) })
-}
-
 /// Exponentiation test
 pub fn exp_test() {
   integer.exp(5, 0) |> should.equal(1)
@@ -255,62 +214,6 @@ pub fn exp_test() {
   integer.exp(5, 2) |> should.equal(25)
   integer.exp(5, 3) |> should.equal(125)
   integer.exp(5, 4) |> should.equal(625)
-}
-
-/// Modular exponentiation test
-pub fn exp_mod_test() {
-  let check_exp_mod = fn(number, exp, modulus) {
-    case modulus > 1, exp < 0, integer.gcd(number, modulus) == 1 {
-      True, False, _ -> {
-        let assert Ok(power) = number |> integer.exp_mod(by: exp, mod: modulus)
-        integer.exp(number, exp) % modulus |> should.equal(power)
-      }
-      False, _, _ ->
-        number
-        |> integer.exp_mod(by: exp, mod: modulus)
-        |> should.equal(Error(Nil))
-      True, True, False ->
-        number
-        |> integer.exp_mod(by: exp, mod: modulus)
-        |> should.equal(Error(Nil))
-      True, True, True -> {
-        let assert Ok(power) = number |> integer.exp_mod(by: exp, mod: modulus)
-        let assert Ok(inv_power) =
-          number |> integer.exp_mod(by: -exp, mod: modulus)
-        power * inv_power % modulus |> should.equal(1)
-      }
-    }
-  }
-  [2938, 698, 198, 592, 44, 99]
-  |> list.flat_map(fn(number) {
-    [0, 1, 2, 3, 4, 5]
-    |> list.flat_map(fn(exp) { [#(number, exp), #(number, -exp)] })
-  })
-  |> list.flat_map(fn(tuple) {
-    [-5, 0, 1, 2, 3, 29, 30, 31, 32, 33]
-    |> list.map(fn(modulus) { #(tuple.0, tuple.1, modulus) })
-  })
-  |> list.each(fn(tuple) { check_exp_mod(tuple.0, tuple.1, tuple.2) })
-}
-
-/// Modular exponentation test - unsafe version
-pub fn exp_mod_unsafe_test() {
-  list.range(1, 30)
-  |> list.each(fn(number) {
-    number
-    |> integer.exp_mod_unsafe(by: 30, mod: 31)
-    |> should.equal(1)
-  })
-
-  list.range(1, 30)
-  |> list.each(fn(number) {
-    list.range(0, 10)
-    |> list.each(fn(exp) {
-      let power = number |> integer.exp_mod_unsafe(by: exp, mod: 31)
-      let inv_power = number |> integer.exp_mod_unsafe(by: -exp, mod: 31)
-      power * inv_power % 31 |> should.equal(1)
-    })
-  })
 }
 
 /// Integer logarithm test
@@ -389,56 +292,6 @@ pub fn p_adic_unsafe_test() {
   })
   |> list.map(fn(t) { #(t.2 * integer.exp(t.0, t.1), t.0) })
   |> list.each(check_p_adic)
-}
-
-/// Legendre symbol test
-pub fn legendre_symbol_test() {
-  let prime = 31
-  let numbers = list.range(1, 30)
-  let squares =
-    numbers
-    |> list.map(fn(number) { number * number % prime })
-    |> list.fold(from: set.new(), with: set.insert)
-  numbers
-  |> list.each(fn(value) {
-    value
-    |> integer.legendre_symbol(prime)
-    |> should.equal(case
-      squares
-      |> set.contains(value)
-    {
-      True -> 1
-      False -> -1
-    })
-  })
-}
-
-/// Jacobi symbol test
-pub fn jacobi_symbol_test() {
-  13
-  |> integer.jacobi_symbol(31)
-  |> should.equal(Ok(13 |> integer.legendre_symbol(31)))
-  13 |> integer.jacobi_symbol(30) |> should.equal(Error(Nil))
-  13 |> integer.jacobi_symbol(2) |> should.equal(Error(Nil))
-}
-
-/// Unsafe jacobi symbol test
-pub fn jacobi_symbol_unsafe_test() {
-  let odd = 15
-  let expected_values = [0, 1, 1, 0, 1, 0, 0, -1, 1, 0, 0, -1, 0, -1, -1]
-  list.range(0, odd - 1)
-  |> list.map(fn(number) { integer.jacobi_symbol_unsafe(number, odd) })
-  |> should.equal(expected_values)
-
-  primality.primes_before(1000)
-  |> list.drop(1)
-  |> list.each(fn(prime) {
-    list.range(0, prime - 1)
-    |> list.each(fn(number) {
-      integer.jacobi_symbol_unsafe(number, prime)
-      |> should.equal(integer.legendre_symbol(number, prime))
-    })
-  })
 }
 
 pub fn sqrt_test() {

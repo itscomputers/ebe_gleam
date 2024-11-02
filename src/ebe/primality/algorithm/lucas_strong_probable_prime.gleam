@@ -11,6 +11,7 @@ import gleam/iterator.{type Iterator}
 import gleam/list
 
 import ebe/integer
+import ebe/integer/modular
 import ebe/primality/observation.{
   type Observation, Composite, DivisorFound, Indeterminate, ProbablePrime,
   StrongProbablePrime, Undetermined,
@@ -103,7 +104,7 @@ fn setup(witness: Witness, number: Int) -> Witness {
     - {
       seq
       |> lucas.discriminant
-      |> integer.jacobi_symbol_unsafe(number)
+      |> modular.jacobi_symbol_unsafe(number)
     }
   let #(upper, index) = delta |> integer.p_adic_unsafe(2)
   Witness(
@@ -140,7 +141,7 @@ fn set_jacobi(witness: Witness, number: Int) -> Witness {
     ..witness,
     jacobi: witness.seq
       |> lucas.q
-      |> integer.jacobi_symbol_unsafe(number),
+      |> modular.jacobi_symbol_unsafe(number),
   )
 }
 
@@ -165,14 +166,15 @@ fn condition_u(witness: Witness, _number: Int, _q: Int) -> Bool {
 fn condition_v(witness: Witness, number, _q: Int) -> Bool {
   let value = witness.seq |> lucas.value
   let q = witness.seq |> lucas.q
-  witness.delta == number + 1 && value.v != { 2 * q } |> integer.mod(number)
+  witness.delta == number + 1
+  && value.v != modular.multiply_unsafe(2, q, number)
 }
 
 /// Composite condition based on the Lucas Q-value
 fn condition_q(witness: Witness, number: Int, q: Int) -> Bool {
   let seq = witness.seq
   witness.delta == number + 1
-  && q != { lucas.q(seq) * witness.jacobi } |> integer.mod(number)
+  && q != modular.multiply_unsafe(lucas.q(seq), witness.jacobi, number)
   || witness.delta != number + 1
   && q != { witness.jacobi |> integer.mod(number) }
 }
@@ -215,7 +217,7 @@ type WitnessSearch {
 fn witnesses(number: Int) -> Iterator(WitnessSearch) {
   iterator.iterate(witness_search(number, 5), next_search)
   |> iterator.filter(fn(search) {
-    search.discriminant |> integer.jacobi_symbol_unsafe(search.number) == -1
+    search.discriminant |> modular.jacobi_symbol_unsafe(search.number) == -1
   })
 }
 

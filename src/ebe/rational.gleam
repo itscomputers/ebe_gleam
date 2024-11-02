@@ -20,7 +20,8 @@ pub fn new(
   }
 }
 
-/// Construct new rational number - **unsafe**
+/// Unsafely construct new rational number
+/// Assumes denominator != 0
 pub fn frac(numerator: Int, denominator: Int) {
   case denominator {
     0 -> panic
@@ -54,7 +55,7 @@ pub fn denominator(rational: Rational) -> Int {
 }
 
 /// Compare two rational numbers
-pub fn compare(rational: Rational, with other: Rational) {
+pub fn compare(rational: Rational, with other: Rational) -> Order {
   int.compare(rational.numer * other.denom, rational.denom * other.numer)
 }
 
@@ -105,7 +106,7 @@ pub fn add(rational: Rational, with other: Rational) -> Rational {
 
 /// Subtract another rational number from a rational number
 pub fn subtract(rational: Rational, other: Rational) -> Rational {
-  rational |> add(other |> negate)
+  other |> negate |> add(rational)
 }
 
 /// Multiply two rational numbers

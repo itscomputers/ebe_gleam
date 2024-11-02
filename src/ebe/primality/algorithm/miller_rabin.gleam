@@ -13,6 +13,7 @@ import gleam/list
 import gleam/set.{type Set}
 
 import ebe/integer
+import ebe/integer/modular
 import ebe/primality/observation.{
   type Observation, Composite, ProbablePrime, Undetermined,
 }
@@ -65,7 +66,7 @@ fn observe_loop(
 /// Observation by a witness
 pub fn observation(number: Int, by witness: Witness) -> Observation {
   let #(exp, rest) = integer.p_adic_unsafe(number - 1, 2)
-  let check = integer.exp_mod_unsafe(witness.value, by: rest, mod: number)
+  let check = modular.exp_unsafe(witness.value, by: rest, mod: number)
   case
     check
     |> prime_observation(when: 1)
@@ -85,7 +86,7 @@ fn observation_loop(
   witness: Witness,
   remaining remaining: Int,
 ) -> Observation {
-  let check = integer.exp_mod_unsafe(check, by: 2, mod: number)
+  let check = modular.exp_unsafe(check, by: 2, mod: number)
   case check, remaining {
     _, 0 -> Composite
     1, _ -> Composite

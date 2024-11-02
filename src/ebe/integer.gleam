@@ -129,71 +129,12 @@ fn bezout_loop(
   }
 }
 
-/// Modular inverse
-pub fn inv_mod(number: Int, mod modulus: Int) -> Result(Int, Nil) {
-  case modulus > 1 {
-    False -> Nil |> Error
-    True -> {
-      let inv = inv_mod_unsafe(number, modulus)
-      case inv * number % modulus {
-        1 -> inv |> Ok
-        -1 -> inv |> Ok
-        _ -> Nil |> Error
-      }
-    }
-  }
-}
-
-/// Unsafe modular inverse without modulus check or invertibility check
-pub fn inv_mod_unsafe(number: Int, mod modulus: Int) -> Int {
-  let #(inv, _) = number |> bezout(modulus)
-  case inv > 0 {
-    True -> inv
-    False -> inv + modulus
-  }
-}
-
 /// Integer exponentiation
 pub fn exp(number: Int, by exponent: Int) -> Int {
   case exponent {
     0 -> 1
     e if e % 2 == 0 -> exp(number * number, e / 2)
     _ -> number * exp(number * number, exponent / 2)
-  }
-}
-
-/// Modular exponentiation
-pub fn exp_mod(
-  number: Int,
-  by exponent: Int,
-  mod modulus: Int,
-) -> Result(Int, Nil) {
-  case modulus > 1, exponent < 0 {
-    False, _ -> Nil |> Error
-    True, False -> exp_mod_unsafe(number, exponent, modulus) |> Ok
-    True, True -> exp_mod_unsafe(number, -exponent, modulus) |> inv_mod(modulus)
-  }
-}
-
-/// Modular exponentiation without modulus check
-pub fn exp_mod_unsafe(number: Int, by exponent: Int, mod modulus: Int) -> Int {
-  case exponent < 0 {
-    True ->
-      number
-      |> exp_mod_unsafe(by: -exponent, mod: modulus)
-      |> inv_mod_unsafe(modulus)
-    False ->
-      case exponent {
-        0 -> 1
-        e if e % 2 == 0 ->
-          exp_mod_unsafe(number * number % modulus, e / 2, modulus)
-        _ ->
-          {
-            exp_mod_unsafe(number, exponent - 1, modulus)
-            |> int.multiply(number)
-          }
-          % modulus
-      }
   }
 }
 
@@ -251,60 +192,6 @@ fn p_adic_loop(number: Int, base: Int, exponent: Int) -> #(Int, Int) {
   case number % base {
     0 -> p_adic_loop(number / base, base, exponent + 1)
     _ -> #(exponent, number)
-  }
-}
-
-/// Legendre symbol - using Euler criterion 
-/// Unsafe function - assumes prime is prime
-pub fn legendre_symbol(number: Int, prime: Int) -> Int {
-  case number % prime {
-    0 -> 0
-    _ ->
-      case
-        prime - 1 == exp_mod_unsafe(number, by: { prime - 1 } / 2, mod: prime)
-      {
-        True -> -1
-        False -> 1
-      }
-  }
-}
-
-/// Jacobi symbol - generalization of Legendre symbol
-pub fn jacobi_symbol(number: Int, other: Int) -> Result(Int, Nil) {
-  case other % 2 {
-    0 -> Nil |> Error
-    _ -> number |> jacobi_symbol_unsafe(other) |> Ok
-  }
-}
-
-/// Jacobi symbol - unsafe
-/// Assumes other is odd
-pub fn jacobi_symbol_unsafe(number: Int, other: Int) -> Int {
-  case other {
-    1 -> 1
-    _ ->
-      case gcd(number, other) {
-        1 -> jacobi_symbol_loop(number, other, 1)
-        _ -> 0
-      }
-  }
-}
-
-/// Jacobi symbol - recursive function
-fn jacobi_symbol_loop(number: Int, other: Int, sign: Int) -> Int {
-  case other {
-    1 -> sign
-    _ -> {
-      let #(exp, rest) = p_adic_unsafe(number |> mod(other), 2)
-      let sign = case exp % 2, rest % 4, other % 8 {
-        0, 3, 3 -> -sign
-        _, 3, 7 -> -sign
-        1, 1, 3 -> -sign
-        1, _, 5 -> -sign
-        _, _, _ -> sign
-      }
-      jacobi_symbol_loop(other, rest, sign)
-    }
   }
 }
 
