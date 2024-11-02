@@ -295,7 +295,7 @@ fn jacobi_symbol_loop(number: Int, other: Int, sign: Int) -> Int {
   case other {
     1 -> sign
     _ -> {
-      let assert Ok(#(exp, rest)) = p_adic(number % other, 2)
+      let #(exp, rest) = p_adic_unsafe(number |> mod(other), 2)
       let sign = case exp % 2, rest % 4, other % 8 {
         0, 3, 3 -> -sign
         _, 3, 7 -> -sign

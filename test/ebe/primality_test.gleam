@@ -1,9 +1,10 @@
 import ebe/primality
+import ebe/primality/algorithm/lucas_strong_probable_prime as lucas_primality
 import ebe/primality/algorithm/miller_rabin
 import ebe/primality/iterator.{type Primes} as iter
 import ebe/primality/observation.{
-  Composite, Indeterminate, Prime, ProbablePrime, StrongProbablePrime,
-  Undetermined,
+  Composite, DivisorFound, Indeterminate, Prime, ProbablePrime,
+  StrongProbablePrime, Undetermined,
 }
 
 import gleam/bool
@@ -146,20 +147,22 @@ pub fn miller_rabin_randomized_test() {
   })
 }
 
-// pub fn lucas_observation_test() {
-//   list.range(3, 100)
-//   |> list.filter(fn(number) {
-//     { number % 2 == 1 && number != 5 } || number % 10 == 0
-//   })
-//   |> list.each(fn(number) {
-//     let assert Ok(seq) = lucas_seq.new_mod(1, -1, number)
-//     case number |> lucas.observation(by: LucasWitness(seq, False)) {
-//       Composite | DivisorFound(_) ->
-//         number |> primality.is_prime_naive |> should.be_false
-//       _ -> number |> primality.is_prime_naive |> should.be_true
-//     }
-//   })
-// }
+pub fn lucas_observation_test() {
+  list.range(3, 100)
+  |> list.filter(fn(number) {
+    { number % 2 == 1 && number != 5 } || number % 10 == 0
+  })
+  |> list.each(fn(number) {
+    case
+      number
+      |> lucas_primality.observation(by: lucas_primality.witness(1, -1, number))
+    {
+      Composite | DivisorFound(_) ->
+        number |> primality.is_prime_naive |> should.be_false
+      _ -> number |> primality.is_prime_naive |> should.be_true
+    }
+  })
+}
 
 fn primes_up_to_100() {
   [
