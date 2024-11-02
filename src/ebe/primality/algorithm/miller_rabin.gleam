@@ -53,10 +53,9 @@ fn observe_loop(
   number: Int,
   witnesses: List(Witness),
 ) -> Observation {
-  case obs |> observation.concrete, witnesses {
-    True, _ -> obs
-    False, [] -> obs
-    False, [witness, ..rest] ->
+  case witnesses {
+    [] -> obs
+    [witness, ..rest] ->
       obs
       |> observation.combine(number |> observation(by: witness))
       |> observe_loop(number, rest)

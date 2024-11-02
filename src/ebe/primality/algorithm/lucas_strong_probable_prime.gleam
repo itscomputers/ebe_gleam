@@ -16,10 +16,12 @@ import ebe/primality/observation.{
 }
 import ebe/sequence/lucas.{type LucasSequence}
 
+/// Witness for observed primality
 pub opaque type Witness {
   Witness(seq: LucasSequence, delta: Int, jacobi: Int, upper: Int, strong: Bool)
 }
 
+/// Construct a witness for primality of number using Lucas values p, q
 pub fn witness(p: Int, q: Int, number: Int) -> Witness {
   Witness(lucas.new_mod_unsafe(p, q, mod: number), 0, 0, 0, False)
 }
@@ -31,11 +33,14 @@ pub fn observation(number: Int, by witness: Witness) -> Observation {
   |> fn(obs) {
     case obs |> observation.concrete {
       True -> obs
-      False -> obs |> final_observation(witness, number)
+      False -> obs |> lucas_observation(witness, number)
     }
   }
 }
 
+/// Early observation of two extreme cases:
+///   - Indeterminate if the witness will not work for number
+///   - DivisorFound if the witness stumbled upon a divisor of number
 fn first_observation(witness: Witness, number: Int) -> Observation {
   let divisors = number |> possible_divisors(witness.seq)
   Undetermined
@@ -53,7 +58,8 @@ fn first_observation(witness: Witness, number: Int) -> Observation {
   })
 }
 
-fn final_observation(
+/// Primary observation of primality of number by witness
+fn lucas_observation(
   obs: Observation,
   witness: Witness,
   number: Int,
@@ -68,6 +74,7 @@ fn final_observation(
   |> apply_strong(witness)
 }
 
+/// Prepare the witness for observation
 fn setup(witness: Witness, number: Int) -> Witness {
   let seq = witness.seq
   let delta =
@@ -88,6 +95,7 @@ fn setup(witness: Witness, number: Int) -> Witness {
   |> set_strong
 }
 
+/// Set strong attribute based on the intermediate state of algorithm
 fn set_strong(witness: Witness) -> Witness {
   case witness.upper {
     1 -> witness
@@ -105,6 +113,7 @@ fn set_strong(witness: Witness) -> Witness {
   }
 }
 
+/// Set jacobi symbol for use with composite conditions
 fn set_jacobi(witness: Witness, number: Int) -> Witness {
   Witness(
     ..witness,
@@ -114,26 +123,31 @@ fn set_jacobi(witness: Witness, number: Int) -> Witness {
   )
 }
 
+/// List of possible divisors of number from the sequence
 fn possible_divisors(number: Int, seq: LucasSequence) -> List(Int) {
   [seq |> lucas.p, seq |> lucas.q, seq |> lucas.discriminant]
   |> list.map(fn(value) { integer.gcd(number, value) })
   |> list.filter(fn(value) { value > 1 })
 }
 
+/// Double the index of the witness Lucas sequence
 fn double(witness: Witness) -> Witness {
   Witness(..witness, seq: witness.seq |> lucas.double)
 }
 
+/// Composite condition based on the Lucas U-value
 fn condition_u(witness: Witness, _number: Int, _q: Int) -> Bool {
   { witness.seq |> lucas.value }.u != 0
 }
 
+/// Composite condition based on the Lucas V-value
 fn condition_v(witness: Witness, number, _q: Int) -> Bool {
   let value = witness.seq |> lucas.value
   let q = witness.seq |> lucas.q
   witness.delta == number + 1 && value.v != { 2 * q } |> integer.mod(number)
 }
 
+/// Composite condition based on the Lucas Q-value
 fn condition_q(witness: Witness, number: Int, q: Int) -> Bool {
   let seq = witness.seq
   witness.delta == number + 1
@@ -142,6 +156,7 @@ fn condition_q(witness: Witness, number: Int, q: Int) -> Bool {
   && q != { witness.jacobi |> integer.mod(number) }
 }
 
+/// Composite observation using composite condition with a default fallback
 fn observe_composite(
   obs: Observation,
   witness: Witness,
@@ -156,6 +171,7 @@ fn observe_composite(
   }
 }
 
+/// Apply strong attribute to an observation
 fn apply_strong(obs: Observation, witness: Witness) -> Observation {
   case obs, witness.strong {
     ProbablePrime, True -> StrongProbablePrime
@@ -163,6 +179,7 @@ fn apply_strong(obs: Observation, witness: Witness) -> Observation {
   }
 }
 
+/// Extract Lucas Q-value from witness
 fn q_value(witness: Witness) -> Int {
   { witness.seq |> lucas.value }.q
 }
