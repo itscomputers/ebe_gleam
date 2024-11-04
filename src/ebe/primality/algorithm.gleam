@@ -7,6 +7,17 @@ import ebe/primality/observation.{
   type Observation, Composite, Indeterminate, Prime, Undetermined,
 }
 
+/// Primality determination
+///   - deterministic result if number < 341_550_071_728_321 
+///   - probabilistic result otherwise
+///       - probability of incorrect classification < 4^(-10) for Miller-Rabin test
+pub fn is_prime(number: Int) {
+  case number |> primality_observation |> observation.concretize {
+    Prime -> True
+    _ -> False
+  }
+}
+
 /// Final primality observation from chain of observations
 ///   - stops early once a concrete observation is found
 pub fn primality_observation(number: Int) -> Observation {

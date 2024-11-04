@@ -44,6 +44,19 @@ fn handle_single_argument(
   }
 }
 
+fn handle_two_arguments(
+  function: fn(Int, Int) -> a,
+  arg1: String,
+  arg2: String,
+) -> Result(String, String) {
+  case int_arg(arg1), int_arg(arg2) {
+    Ok(n1), Ok(n2) -> function(n1, n2) |> string.inspect |> Ok
+    Error(e), Ok(_) -> Error(e)
+    Ok(_), Error(e) -> Error(e)
+    Error(e1), Error(e2) -> Error(e1 <> ", " <> e2)
+  }
+}
+
 fn build_display(args: Result(Args, String)) -> Result(String, String) {
   io.println("")
   case args |> preamble {
@@ -51,6 +64,8 @@ fn build_display(args: Result(Args, String)) -> Result(String, String) {
       primality.primes_before |> handle_single_argument(arg)
     Ok(Args("is_prime", [arg])) ->
       primality.is_prime |> handle_single_argument(arg)
+    Ok(Args("primes_in_range", [arg1, arg2])) ->
+      primality.primes_in_range |> handle_two_arguments(arg1, arg2)
     Ok(args) ->
       { "error: unsupported function: " <> { args |> string.inspect } } |> Ok
     Error(e) -> Error(e)

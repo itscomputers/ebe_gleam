@@ -2,7 +2,7 @@ import ebe/integer
 import ebe/primality
 import ebe/primality/algorithm/lucas_strong_probable_prime as lucas_primality
 import ebe/primality/algorithm/miller_rabin
-import ebe/primality/iterator.{type Primes} as iter
+import ebe/primality/eratosthenes.{type Primes}
 import ebe/primality/observation.{
   type Observation, Composite, DivisorFound, Indeterminate, Prime, ProbablePrime,
   StrongProbablePrime, Undetermined,
@@ -18,13 +18,13 @@ pub fn main() {
   gleeunit.main()
 }
 
-pub fn next_prime_test() {
+pub fn eratosthenes_test() {
   let assert_next_prime = fn(primes: Primes, expected: Int) -> Primes {
-    primes |> iter.next |> should.equal(expected)
-    primes |> iter.advance
+    primes |> eratosthenes.next |> should.equal(expected)
+    primes |> eratosthenes.step
   }
 
-  iter.new()
+  eratosthenes.new()
   |> assert_next_prime(2)
   |> assert_next_prime(3)
   |> assert_next_prime(5)
@@ -44,6 +44,15 @@ pub fn primes_before_test() {
   )
   primality.primes_before(101)
   |> should.equal(primes_up_to_100())
+}
+
+pub fn primes_in_range_test() {
+  primality.primes_in_range(from: 53, to: 97)
+  |> should.equal(
+    primes_up_to_100()
+    |> list.drop_while(fn(p) { p < 53 })
+    |> list.take_while(fn(p) { p < 97 }),
+  )
 }
 
 pub fn is_prime_naive_test() {

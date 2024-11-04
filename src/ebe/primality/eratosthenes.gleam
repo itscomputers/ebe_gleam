@@ -18,7 +18,7 @@ pub fn next(primes: Primes) -> Int {
 }
 
 /// Advance the primes iterator
-pub fn advance(primes: Primes) -> Primes {
+pub fn step(primes: Primes) -> Primes {
   case primes.iter |> iterator.first {
     Ok(prime) ->
       Primes(prime, primes.iter |> iterator.filter(fn(n) { n % prime != 0 }))
