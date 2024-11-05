@@ -1,11 +1,14 @@
+import gleam/int
+import gleam/io
+import gleam/string
+
 import argv
 import clip
 import clip/arg
 import clip/help
+
+import ebe/factorization
 import ebe/primality
-import gleam/int
-import gleam/io
-import gleam/string
 
 type Args {
   Args(function: String, arguments: List(String))
@@ -66,6 +69,8 @@ fn build_display(args: Result(Args, String)) -> Result(String, String) {
       primality.is_prime |> handle_single_argument(arg)
     Ok(Args("primes_in_range", [arg1, arg2])) ->
       primality.primes_in_range |> handle_two_arguments(arg1, arg2)
+    Ok(Args("factor", [arg])) ->
+      factorization.factor |> handle_single_argument(arg)
     Ok(args) ->
       { "error: unsupported function: " <> { args |> string.inspect } } |> Ok
     Error(e) -> Error(e)
