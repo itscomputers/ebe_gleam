@@ -4,8 +4,8 @@
 
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/order.{Eq, Gt, Lt}
-import gleam/result
 
 import ebe/integer
 import ebe/integer/modular
@@ -23,20 +23,24 @@ type TonelliShanksParams {
 
 /// Square root of number modulo prime
 ///   - return Error if jacobi symbol != 1
-pub fn sqrt(prime: Int, number: Int) -> Result(SquareRoot, Nil) {
+pub fn sqrt(prime: Int, number: Int) -> Option(SquareRoot) {
   case prime {
-    2 -> build_square_root(number |> integer.mod(prime), prime) |> Ok
+    2 -> build_square_root(number |> integer.mod(prime), prime) |> Some
     _ ->
       prime
-      |> check_jacobi_symbol(number)
-      |> check_primality(prime)
-      |> result.try(fn(_) {
+      |> ensure_has_sqrt(number)
+      |> option.then(ensure_primality(prime))
+      |> option.then(fn(_) {
         case prime |> integer.mod(4) {
-          1 -> prime |> tonelli_shanks(number) |> Ok
-          _ -> prime |> trivial_sqrt(number) |> Ok
+          1 -> prime |> tonelli_shanks(number) |> Some
+          _ -> prime |> trivial_sqrt(number) |> Some
         }
       })
   }
+}
+
+pub fn roots(sqrt: SquareRoot) -> List(Int) {
+  [sqrt.root, sqrt.other_root] |> list.unique
 }
 
 /// Square roots of number for a prime == 3 mod(4), using trivial identity
@@ -108,14 +112,14 @@ fn tonelli_shanks_index(value: Int, index: Int, prime: Int) {
 
 /// Square roots of -1 for a prime == 1 mod(4), using Wilson's theorem
 /// This is slower than calling sqrt(prime, -1)
-pub fn wilson(prime: Int) -> Result(SquareRoot, Nil) {
+pub fn wilson(prime: Int) -> Option(SquareRoot) {
   case prime |> integer.mod(by: 4) {
     1 ->
       case prime |> primality.is_prime {
-        True -> wilson_unsafe(prime) |> Ok
-        False -> Nil |> Error
+        True -> wilson_unsafe(prime) |> Some
+        False -> None
       }
-    _ -> Nil |> Error
+    _ -> None
   }
 }
 
@@ -133,14 +137,14 @@ fn wilson_unsafe(prime: Int) -> SquareRoot {
 }
 
 /// Square roots of -1 for a prime == 1 mod(4), using Legendre's method
-pub fn legendre(prime: Int) -> Result(SquareRoot, Nil) {
+pub fn legendre(prime: Int) -> Option(SquareRoot) {
   case prime |> integer.mod(by: 4) {
     1 ->
       case prime |> primality.is_prime {
-        True -> legendre_loop(2, prime) |> Ok
-        False -> Nil |> Error
+        True -> legendre_loop(2, prime) |> Some
+        False -> None
       }
-    _ -> Nil |> Error
+    _ -> None
   }
 }
 
@@ -172,21 +176,18 @@ fn non_residue(prime: Int, z: Int) -> Int {
   }
 }
 
-/// Ensure jacobi symbol == 1
-fn check_jacobi_symbol(prime: Int, number: Int) -> Result(Bool, Nil) {
+fn ensure_has_sqrt(prime: Int, number: Int) -> Option(Bool) {
   case number |> modular.jacobi_symbol_unsafe(prime) {
-    1 -> True |> Ok
-    _ -> Nil |> Error
+    1 -> True |> Some
+    _ -> None
   }
 }
 
-/// Ensure prime is a prime number
-fn check_primality(res: Result(Bool, Nil), prime: Int) -> Result(Bool, Nil) {
-  res
-  |> result.try(fn(_) {
+fn ensure_primality(prime: Int) -> fn(Bool) -> Option(Bool) {
+  fn(_) {
     case prime |> primality.is_prime {
-      True -> True |> Ok
-      False -> Nil |> Error
+      True -> True |> Some
+      False -> None
     }
-  })
+  }
 }
