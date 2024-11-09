@@ -16,6 +16,28 @@ pub fn sgn(number: Int) -> Int {
   }
 }
 
+/// Euclidean division with remainder
+///   returns #(quo, rem) such that
+///     - number == divisor * quo + rem
+///     - 0 <= rem < |divisor|
+pub fn quo_rem(number: Int, by divisor: Int) -> Option(#(Int, Int)) {
+  case divisor == 0 {
+    True -> None
+    False -> number |> div_mod(by: divisor) |> Some
+  }
+}
+
+/// Unsafe Euclidean division with remainder
+///   returns #(quo, rem) such that
+///     - number == divisor * quo + rem
+///     - 0 <= rem < |divisor|
+///   assumes divisor != 0
+pub fn div_mod(number: Int, by divisor: Int) -> #(Int, Int) {
+  number
+  |> mod(divisor)
+  |> fn(remainder) { #({ number - remainder } / divisor, remainder) }
+}
+
 /// Euclidean remainder
 pub fn rem(number: Int, by divisor: Int) -> Option(Int) {
   case divisor == 0 {
@@ -24,8 +46,8 @@ pub fn rem(number: Int, by divisor: Int) -> Option(Int) {
   }
 }
 
-/// Euclidean remainder - unsafe
-/// Assumes divisor != 0
+/// Unsafe Euclidean remainder
+///   assumes divisor !=0
 pub fn mod(number: Int, by divisor: Int) -> Int {
   let remainder = number % divisor
   case remainder |> int.compare(0) {
@@ -42,31 +64,17 @@ pub fn quo(number: Int, by divisor: Int) -> Option(Int) {
   }
 }
 
-/// Euclidean quotient - unsafe
-/// Assumes divisor != 0
+/// Unsafe Euclidean quotient
+///   assumes divisor != 0
 pub fn div(number: Int, by divisor: Int) -> Int {
   number
   |> mod(by: divisor)
   |> fn(remainder) { { number - remainder } / divisor }
 }
 
-/// Euclidean division with remainder
-pub fn quo_rem(number: Int, by divisor: Int) -> Option(#(Int, Int)) {
-  case divisor == 0 {
-    True -> None
-    False -> number |> div_mod(by: divisor) |> Some
-  }
-}
-
-/// Euclidean division with remainder - unsafe
-/// Assumes divisor != 0
-pub fn div_mod(number: Int, by divisor: Int) -> #(Int, Int) {
-  number
-  |> mod(divisor)
-  |> fn(remainder) { #({ number - remainder } / divisor, remainder) }
-}
-
 /// Greatest common divisor
+///   returns largest nonnegative integer that divides number, other
+///     - gcd(0, 0) = 0 since 0 is the maximum with respect to divisibility
 pub fn gcd(number: Int, with other: Int) -> Int {
   case other {
     0 -> number |> int.absolute_value
@@ -84,6 +92,7 @@ pub fn gcd_all(numbers: List(Int)) -> Int {
 }
 
 /// Least common multiple
+///   returns largest nonnegative integer that is multiple of number, other
 pub fn lcm(number: Int, with other: Int) -> Int {
   case number, other {
     0, 0 -> 0
@@ -101,7 +110,7 @@ pub fn lcm_all(numbers: List(Int)) -> Int {
 }
 
 /// Bezout's lemma
-/// Returns #(x, y) such that number * x + other * y = gcd(number, other)
+///   returns #(x, y) such that number * x + other * y = gcd(number, other)
 pub fn bezout(number: Int, other: Int) -> #(Int, Int) {
   case sgn(number), sgn(other) {
     0, s -> #(0, s)
@@ -112,7 +121,6 @@ pub fn bezout(number: Int, other: Int) -> #(Int, Int) {
   }
 }
 
-/// Bezout - recursive function
 fn bezout_loop(
   number: Int,
   other: Int,
@@ -140,6 +148,7 @@ pub fn exp(number: Int, by exponent: Int) -> Int {
 }
 
 /// Integer logarithm
+///   returns largest exp such that base ^ exp <= number
 pub fn log(number: Int, base: Int) -> Option(Int) {
   case number >= 0, base > 1 {
     True, True -> log_unsafe(number, base) |> Some
@@ -147,8 +156,9 @@ pub fn log(number: Int, base: Int) -> Option(Int) {
   }
 }
 
-/// Integer logarithm - unsafe
-/// Assumes number > 0 and base > 1
+/// Unsafe integer logarithm
+///   returns largest exp such that base ^ exp <= number
+///   assumes number > 0 and base > 1
 pub fn log_unsafe(number: Int, base: Int) -> Int {
   case number {
     0 -> 1
@@ -156,8 +166,6 @@ pub fn log_unsafe(number: Int, base: Int) -> Int {
   }
 }
 
-/// Integer logarithm - recursive function
-/// Assumes number > 0 and base > 1
 fn log_loop(number: Int, base: Int, exponent: Int) -> Int {
   case number < base {
     True -> exponent
@@ -166,7 +174,7 @@ fn log_loop(number: Int, base: Int, exponent: Int) -> Int {
 }
 
 /// p-adic representation
-/// returns #(exp, n) such that number == n * base ^ exp
+///   returns #(exp, n) such that number == n * base ^ exp
 pub fn p_adic(number: Int, base: Int) -> Option(#(Int, Int)) {
   case base > 1 {
     True -> number |> p_adic_unsafe(base) |> Some
@@ -174,8 +182,9 @@ pub fn p_adic(number: Int, base: Int) -> Option(#(Int, Int)) {
   }
 }
 
-/// p-adic representation - unsafe
-/// Assumes number base > 1
+/// Unsafe p-adic representation
+///   returns #(exp, n) such that number == n * base ^ exp
+///   assumes number base > 1
 pub fn p_adic_unsafe(number: Int, base: Int) -> #(Int, Int) {
   case number |> int.compare(0) {
     Eq -> #(0, 0)
@@ -188,7 +197,6 @@ pub fn p_adic_unsafe(number: Int, base: Int) -> #(Int, Int) {
   }
 }
 
-/// p-adic representation - recursive function
 fn p_adic_loop(number: Int, base: Int, exponent: Int) -> #(Int, Int) {
   case number % base {
     0 -> p_adic_loop(number / base, base, exponent + 1)
@@ -197,6 +205,7 @@ fn p_adic_loop(number: Int, base: Int, exponent: Int) -> #(Int, Int) {
 }
 
 /// Integer square root
+///   returns largest root such that root ^ 2 <= number
 pub fn sqrt(number: Int) -> Option(Int) {
   case number < 0 {
     True -> None
@@ -204,8 +213,9 @@ pub fn sqrt(number: Int) -> Option(Int) {
   }
 }
 
-/// Integer square root - unsafe
-/// Assumes number >= 0
+/// Unsafe integer square root
+///   returns largest integer root such that root ^ 2 <= number
+///   assumes number >= 0
 pub fn sqrt_unsafe(number: Int) -> Int {
   let assert Ok(float_sqrt) = number |> int.square_root
   sqrt_loop(number, float_sqrt |> float.round)
@@ -220,12 +230,9 @@ fn sqrt_loop(number: Int, guess: Int) -> Int {
 }
 
 /// Square property
+///   returns True if number is a square, false otherwise
 pub fn is_square(number: Int) -> Bool {
-  is_nonnegative(number) && is_square_mod_16(number) && has_exact_sqrt(number)
-}
-
-fn is_nonnegative(number: Int) -> Bool {
-  number >= 0
+  number >= 0 && is_square_mod_16(number) && has_exact_sqrt(number)
 }
 
 fn is_square_mod_16(number: Int) -> Bool {
@@ -242,10 +249,13 @@ fn has_exact_sqrt(number: Int) -> Bool {
   }
 }
 
+/// Nth-root
+///   returns largest integer root such that root ^ degree <= number
 pub fn root(number: Int, by degree: Int) -> Option(Int) {
-  case degree < 2 {
-    True -> None
-    False ->
+  case degree |> int.compare(1) {
+    Lt -> None
+    Eq -> number |> Some
+    Gt ->
       case number < 0, degree % 2 == 0 {
         True, True -> None
         True, False -> -root_unsafe(-number, degree) |> Some
@@ -254,6 +264,9 @@ pub fn root(number: Int, by degree: Int) -> Option(Int) {
   }
 }
 
+/// Unsafe Nth-root
+///   returns largest integer root such that root ^ degree <= number
+///   assumes degree > 0 and number >= 0 if degree is even
 pub fn root_unsafe(number: Int, by degree: Int) -> Int {
   root_loop(number, degree, number + 1, number)
 }
