@@ -3,13 +3,13 @@
 ////    - unless otherwise specified, unsafe assumes modulus > 1
 
 import gleam/int
+import gleam/option.{type Option, None, Some}
 import gleam/pair
-import gleam/result
 
 import ebe/integer
 
 /// Modular addition
-pub fn add(number: Int, other: Int, mod modulus: Int) -> Result(Int, Nil) {
+pub fn add(number: Int, other: Int, mod modulus: Int) -> Option(Int) {
   modulus |> safe_binary(op: int.add, with: #(number, other))
 }
 
@@ -19,7 +19,7 @@ pub fn add_unsafe(number: Int, other: Int, mod modulus: Int) -> Int {
 }
 
 /// Modular multiplication
-pub fn multiply(number: Int, other: Int, mod modulus: Int) -> Result(Int, Nil) {
+pub fn multiply(number: Int, other: Int, mod modulus: Int) -> Option(Int) {
   modulus |> safe_binary(op: int.multiply, with: #(number, other))
 }
 
@@ -29,7 +29,7 @@ pub fn multiply_unsafe(number: Int, other: Int, mod modulus: Int) -> Int {
 }
 
 /// Modular negation
-pub fn negate(number: Int, mod modulus: Int) -> Result(Int, Nil) {
+pub fn negate(number: Int, mod modulus: Int) -> Option(Int) {
   -number |> safe_mod(modulus)
 }
 
@@ -39,16 +39,17 @@ pub fn negate_unsafe(number: Int, mod modulus: Int) -> Int {
 }
 
 /// Modular inverse
-pub fn inv(number: Int, mod modulus: Int) -> Result(Int, Nil) {
+pub fn inv(number: Int, mod modulus: Int) -> Option(Int) {
   number
   |> safe_mod(modulus)
-  |> result.try(fn(number) {
+  |> option.map(fn(number) {
     let inv = inv_unsafe(number, modulus)
     case multiply_unsafe(number, inv, modulus) {
-      1 -> inv |> Ok
-      _ -> Nil |> Error
+      1 -> inv |> Some
+      _ -> None
     }
   })
+  |> option.flatten
 }
 
 /// Unsafe modular inverse 
@@ -61,11 +62,12 @@ pub fn inv_unsafe(number: Int, mod modulus: Int) -> Int {
 }
 
 /// Modular exponentiation
-pub fn exp(number: Int, by exponent: Int, mod modulus: Int) -> Result(Int, Nil) {
+pub fn exp(number: Int, by exponent: Int, mod modulus: Int) -> Option(Int) {
   case exponent < 0 {
     True ->
       exp(number, -exponent, modulus)
-      |> result.try(fn(power) { inv(power, modulus) })
+      |> option.map(fn(power) { inv(power, modulus) })
+      |> option.flatten
     False ->
       number
       |> exp_unsafe(exponent, modulus)
@@ -98,10 +100,10 @@ pub fn legendre_symbol(number: Int, prime: Int) -> Int {
 }
 
 /// Jacobi symbol - generalization of Legendre symbol
-pub fn jacobi_symbol(number: Int, other: Int) -> Result(Int, Nil) {
+pub fn jacobi_symbol(number: Int, other: Int) -> Option(Int) {
   case other > 0, other % 2 {
-    False, _ | _, 0 -> Nil |> Error
-    _, _ -> number |> jacobi_symbol_unsafe(other) |> Ok
+    False, _ | _, 0 -> None
+    _, _ -> number |> jacobi_symbol_unsafe(other) |> Some
   }
 }
 
@@ -142,10 +144,10 @@ fn mod(number: Int, by modulus: Int) -> Int {
 }
 
 /// Wrapper for remainder function
-fn safe_mod(number: Int, by modulus: Int) -> Result(Int, Nil) {
+fn safe_mod(number: Int, by modulus: Int) -> Option(Int) {
   case modulus > 1 {
-    True -> number |> mod(modulus) |> Ok
-    False -> Error(Nil)
+    True -> number |> mod(modulus) |> Some
+    False -> None
   }
 }
 
@@ -154,10 +156,10 @@ fn safe_binary(
   modulus: Int,
   op operation: fn(Int, Int) -> Int,
   with values: #(Int, Int),
-) -> Result(Int, Nil) {
+) -> Option(Int) {
   case modulus > 1 {
-    True -> mod_binary(modulus, operation, values) |> Ok
-    False -> Nil |> Error
+    True -> mod_binary(modulus, operation, values) |> Some
+    False -> None
   }
 }
 

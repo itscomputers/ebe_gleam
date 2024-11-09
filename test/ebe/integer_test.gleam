@@ -1,9 +1,11 @@
-import ebe/integer
 import gleam/int
 import gleam/list
+import gleam/option.{None, Some}
 import gleam/pair
 import gleeunit
 import gleeunit/should
+
+import ebe/integer
 
 pub fn main() {
   gleeunit.main()
@@ -11,11 +13,11 @@ pub fn main() {
 
 /// Remainder test
 pub fn rem_test() {
-  69 |> integer.rem(7) |> should.equal(Ok(6))
-  69 |> integer.rem(-7) |> should.equal(Ok(6))
-  -69 |> integer.rem(7) |> should.equal(Ok(1))
-  -69 |> integer.rem(-7) |> should.equal(Ok(1))
-  60 |> integer.rem(0) |> should.equal(Error(Nil))
+  69 |> integer.rem(7) |> should.be_some |> should.equal(6)
+  69 |> integer.rem(-7) |> should.be_some |> should.equal(6)
+  -69 |> integer.rem(7) |> should.be_some |> should.equal(1)
+  -69 |> integer.rem(-7) |> should.be_some |> should.equal(1)
+  60 |> integer.rem(0) |> should.be_none
 }
 
 /// Unsafe remainder test
@@ -28,11 +30,11 @@ pub fn mod_test() {
 
 /// Quotient test
 pub fn quo_test() {
-  69 |> integer.quo(7) |> should.equal(Ok(9))
-  69 |> integer.quo(-7) |> should.equal(Ok(-9))
-  -69 |> integer.quo(7) |> should.equal(Ok(-10))
-  -69 |> integer.quo(-7) |> should.equal(Ok(10))
-  60 |> integer.quo(0) |> should.equal(Error(Nil))
+  69 |> integer.quo(7) |> should.be_some |> should.equal(9)
+  69 |> integer.quo(-7) |> should.be_some |> should.equal(-9)
+  -69 |> integer.quo(7) |> should.be_some |> should.equal(-10)
+  -69 |> integer.quo(-7) |> should.be_some |> should.equal(10)
+  60 |> integer.quo(0) |> should.be_none
 }
 
 /// Unsafe quotient test
@@ -46,12 +48,16 @@ pub fn div_test() {
 /// Quotient with remainder test
 pub fn quo_rem_test() {
   let check_quo_rem = fn(a: Int, b: Int) {
-    let assert Ok(#(quo, rem)) = integer.quo_rem(a, b)
-    Ok(quo) |> should.equal(integer.quo(a, b))
-    Ok(rem) |> should.equal(integer.rem(a, b))
-    { rem >= 0 } |> should.be_true
-    { rem < int.absolute_value(b) } |> should.be_true
-    b * quo + rem |> should.equal(a)
+    integer.quo_rem(a, b)
+    |> should.be_some
+    |> fn(tuple) {
+      let #(quo, rem) = tuple
+      integer.quo(a, b) |> should.be_some |> should.equal(tuple.0)
+      integer.rem(a, b) |> should.be_some |> should.equal(rem)
+      { rem >= 0 } |> should.be_true
+      { rem < int.absolute_value(b) } |> should.be_true
+      b * quo + rem |> should.equal(a)
+    }
   }
 
   [
@@ -218,19 +224,18 @@ pub fn exp_test() {
 
 /// Integer logarithm test
 pub fn log_test() {
-  integer.log(8, 2) |> should.equal(Ok(3))
-  integer.log(9, 2) |> should.equal(Ok(3))
-  integer.log(15, 2) |> should.equal(Ok(3))
-  integer.log(16, 2) |> should.equal(Ok(4))
-  integer.log(0, 2) |> should.equal(Ok(1))
-  integer.log(5, 1) |> should.equal(Error(Nil))
-  integer.log(5, 0) |> should.equal(Error(Nil))
-  integer.log(5, -3) |> should.equal(Error(Nil))
+  integer.log(8, 2) |> should.be_some |> should.equal(3)
+  integer.log(9, 2) |> should.be_some |> should.equal(3)
+  integer.log(15, 2) |> should.be_some |> should.equal(3)
+  integer.log(16, 2) |> should.be_some |> should.equal(4)
+  integer.log(0, 2) |> should.be_some |> should.equal(1)
+  integer.log(5, 1) |> should.be_none
+  integer.log(5, 0) |> should.be_none
+  integer.log(5, -3) |> should.be_none
 
   let check_log = fn(tuple: #(Int, Int)) {
     let #(number, base) = tuple
-    let assert Ok(exp) = integer.log(number, base)
-
+    let exp = integer.log(number, base) |> should.be_some
     { integer.exp(base, exp) < number } |> should.be_true
     { integer.exp(base, exp + 1) >= number } |> should.be_true
   }
@@ -261,20 +266,20 @@ pub fn log_unsafe_test() {
 
 /// p-adic test
 pub fn p_adic_test() {
-  96 |> integer.p_adic(-5) |> should.equal(Error(Nil))
-  96 |> integer.p_adic(0) |> should.equal(Error(Nil))
-  96 |> integer.p_adic(1) |> should.equal(Error(Nil))
-  96 |> integer.p_adic(2) |> should.equal(Ok(#(5, 3)))
-  96 |> integer.p_adic(3) |> should.equal(Ok(#(1, 32)))
-  96 |> integer.p_adic(4) |> should.equal(Ok(#(2, 6)))
-  96 |> integer.p_adic(5) |> should.equal(Ok(#(0, 96)))
-  96 |> integer.p_adic(6) |> should.equal(Ok(#(1, 16)))
-  96 |> integer.p_adic(7) |> should.equal(Ok(#(0, 96)))
-  96 |> integer.p_adic(8) |> should.equal(Ok(#(1, 12)))
-  96 |> integer.p_adic(9) |> should.equal(Ok(#(0, 96)))
-  96 |> integer.p_adic(10) |> should.equal(Ok(#(0, 96)))
-  96 |> integer.p_adic(11) |> should.equal(Ok(#(0, 96)))
-  96 |> integer.p_adic(12) |> should.equal(Ok(#(1, 8)))
+  96 |> integer.p_adic(-5) |> should.be_none
+  96 |> integer.p_adic(0) |> should.be_none
+  96 |> integer.p_adic(1) |> should.be_none
+  96 |> integer.p_adic(2) |> should.be_some |> should.equal(#(5, 3))
+  96 |> integer.p_adic(3) |> should.be_some |> should.equal(#(1, 32))
+  96 |> integer.p_adic(4) |> should.be_some |> should.equal(#(2, 6))
+  96 |> integer.p_adic(5) |> should.be_some |> should.equal(#(0, 96))
+  96 |> integer.p_adic(6) |> should.be_some |> should.equal(#(1, 16))
+  96 |> integer.p_adic(7) |> should.be_some |> should.equal(#(0, 96))
+  96 |> integer.p_adic(8) |> should.be_some |> should.equal(#(1, 12))
+  96 |> integer.p_adic(9) |> should.be_some |> should.equal(#(0, 96))
+  96 |> integer.p_adic(10) |> should.be_some |> should.equal(#(0, 96))
+  96 |> integer.p_adic(11) |> should.be_some |> should.equal(#(0, 96))
+  96 |> integer.p_adic(12) |> should.be_some |> should.equal(#(1, 8))
 }
 
 /// Unsafe p-adic test
@@ -298,22 +303,22 @@ pub fn sqrt_test() {
   list.range(-100, 100)
   |> list.each(fn(number) {
     case number, number |> integer.sqrt {
-      0, Ok(s) -> s |> should.equal(0)
-      1, Ok(s) -> s |> should.equal(1)
-      4, Ok(s) -> s |> should.equal(2)
-      9, Ok(s) -> s |> should.equal(3)
-      16, Ok(s) -> s |> should.equal(4)
-      25, Ok(s) -> s |> should.equal(5)
-      36, Ok(s) -> s |> should.equal(6)
-      49, Ok(s) -> s |> should.equal(7)
-      64, Ok(s) -> s |> should.equal(8)
-      81, Ok(s) -> s |> should.equal(9)
-      100, Ok(s) -> s |> should.equal(10)
-      _, Ok(s) -> {
+      0, Some(s) -> s |> should.equal(0)
+      1, Some(s) -> s |> should.equal(1)
+      4, Some(s) -> s |> should.equal(2)
+      9, Some(s) -> s |> should.equal(3)
+      16, Some(s) -> s |> should.equal(4)
+      25, Some(s) -> s |> should.equal(5)
+      36, Some(s) -> s |> should.equal(6)
+      49, Some(s) -> s |> should.equal(7)
+      64, Some(s) -> s |> should.equal(8)
+      81, Some(s) -> s |> should.equal(9)
+      100, Some(s) -> s |> should.equal(10)
+      _, Some(s) -> {
         { s * s < number } |> should.be_true
         { integer.exp(s + 1, 2) > number } |> should.be_true
       }
-      _, Error(Nil) -> Nil
+      _, None -> Nil
     }
   })
 }
@@ -343,6 +348,27 @@ pub fn is_square_test() {
       100 -> number |> integer.is_square |> should.be_true
       _ -> number |> integer.is_square |> should.be_false
     }
+  })
+}
+
+pub fn root_test() {
+  list.range(1900, 2000)
+  |> list.each(fn(number) {
+    list.range(2, 10)
+    |> list.each(fn(degree) {
+      let root = number |> integer.root(by: degree) |> should.be_some
+      { root |> integer.exp(degree) <= number } |> should.be_true
+      { { root + 1 } |> integer.exp(degree) > number }
+      |> should.be_true
+    })
+  })
+}
+
+pub fn root_unsafe_test() {
+  list.range(2, 100)
+  |> list.each(fn(number) {
+    integer.root_unsafe(number * number * number, 3)
+    |> should.equal(number)
   })
 }
 

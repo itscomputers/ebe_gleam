@@ -16,12 +16,13 @@ pub fn add_test() {
     list.range(2, 20)
     |> list.each(fn(modulus) {
       m.add(tuple.0, tuple.1, modulus)
-      |> should.equal(Ok(tuple.0 + tuple.1 |> integer.mod(modulus)))
+      |> should.be_some
+      |> should.equal(tuple.0 + tuple.1 |> integer.mod(modulus))
     })
 
-    m.add(tuple.0, tuple.1, -1) |> should.equal(Error(Nil))
-    m.add(tuple.0, tuple.1, 0) |> should.equal(Error(Nil))
-    m.add(tuple.0, tuple.1, 1) |> should.equal(Error(Nil))
+    m.add(tuple.0, tuple.1, -1) |> should.be_none
+    m.add(tuple.0, tuple.1, 0) |> should.be_none
+    m.add(tuple.0, tuple.1, 1) |> should.be_none
   })
 }
 
@@ -31,12 +32,13 @@ pub fn multiply_test() {
     list.range(2, 20)
     |> list.each(fn(modulus) {
       m.multiply(tuple.0, tuple.1, modulus)
-      |> should.equal(Ok(tuple.0 * tuple.1 |> integer.mod(modulus)))
+      |> should.be_some
+      |> should.equal(tuple.0 * tuple.1 |> integer.mod(modulus))
     })
 
-    m.add(tuple.0, tuple.1, -1) |> should.equal(Error(Nil))
-    m.add(tuple.0, tuple.1, 0) |> should.equal(Error(Nil))
-    m.add(tuple.0, tuple.1, 1) |> should.equal(Error(Nil))
+    m.add(tuple.0, tuple.1, -1) |> should.be_none
+    m.add(tuple.0, tuple.1, 0) |> should.be_none
+    m.add(tuple.0, tuple.1, 1) |> should.be_none
   })
 }
 
@@ -46,21 +48,22 @@ pub fn negate_test() {
     list.range(2, 20)
     |> list.each(fn(modulus) {
       m.negate(number, modulus)
-      |> should.equal(Ok(-number |> integer.mod(modulus)))
+      |> should.be_some
+      |> should.equal(-number |> integer.mod(modulus))
 
       m.add_unsafe(number, m.negate_unsafe(number, modulus), modulus)
       |> should.equal(0)
     })
 
-    m.negate(number, -1) |> should.equal(Error(Nil))
-    m.negate(number, 0) |> should.equal(Error(Nil))
-    m.negate(number, 1) |> should.equal(Error(Nil))
+    m.negate(number, -1) |> should.be_none
+    m.negate(number, 0) |> should.be_none
+    m.negate(number, 1) |> should.be_none
   })
 }
 
 pub fn inv_test() {
   let check_inv = fn(number: Int, modulus: Int) {
-    let assert Ok(inv) = m.inv(number, modulus)
+    let inv = m.inv(number, modulus) |> should.be_some
     { inv > 0 } |> should.be_true
     { inv < modulus } |> should.be_true
     m.multiply_unsafe(number, inv, modulus) |> should.equal(1)
@@ -70,24 +73,24 @@ pub fn inv_test() {
   |> list.each(fn(modulus) {
     list.range(1, modulus - 1)
     |> list.each(fn(number) { check_inv(number, modulus) })
-    m.inv(0, modulus) |> should.equal(Error(Nil))
+    m.inv(0, modulus) |> should.be_none
   })
 
   [1, 3, 7, 9]
   |> list.each(fn(number) { check_inv(number, 10) })
   [0, 2, 4, 5, 6, 8]
-  |> list.each(fn(number) { m.inv(number, 10) |> should.equal(Error(Nil)) })
+  |> list.each(fn(number) { m.inv(number, 10) |> should.be_none })
 
   [1, 5, 7, 11]
   |> list.each(fn(number) { check_inv(number, 12) })
   [0, 2, 3, 4, 6, 8, 9, 10]
-  |> list.each(fn(number) { m.inv(number, 12) |> should.equal(Error(Nil)) })
+  |> list.each(fn(number) { m.inv(number, 12) |> should.be_none })
 
   list.range(0, 20)
   |> list.each(fn(number) {
-    m.inv(number, -1) |> should.equal(Error(Nil))
-    m.inv(number, 0) |> should.equal(Error(Nil))
-    m.inv(number, 1) |> should.equal(Error(Nil))
+    m.inv(number, -1) |> should.be_none
+    m.inv(number, 0) |> should.be_none
+    m.inv(number, 1) |> should.be_none
   })
 }
 
@@ -99,7 +102,8 @@ pub fn exp_test() {
       [2, 3, 4, 5, 29, 30, 31, 32, 33]
       |> list.each(fn(modulus) {
         m.exp(number, exp, modulus)
-        |> should.equal(Ok(integer.exp(number, exp) |> integer.mod(modulus)))
+        |> should.be_some
+        |> should.equal(integer.exp(number, exp) |> integer.mod(modulus))
       })
     })
   })
@@ -108,14 +112,14 @@ pub fn exp_test() {
   |> list.each(fn(modulus) {
     list.range(1, modulus - 1)
     |> list.each(fn(number) {
-      m.exp(number, modulus - 1, modulus) |> should.equal(Ok(1))
+      m.exp(number, modulus - 1, modulus) |> should.be_some |> should.equal(1)
     })
   })
 
-  m.exp(13, 5, 0) |> should.equal(Error(Nil))
-  m.exp(13, 5, -1) |> should.equal(Error(Nil))
-  m.exp(13, 0, 0) |> should.equal(Error(Nil))
-  m.exp(13, 0, -1) |> should.equal(Error(Nil))
+  m.exp(13, 5, 0) |> should.be_none
+  m.exp(13, 5, -1) |> should.be_none
+  m.exp(13, 0, 0) |> should.be_none
+  m.exp(13, 0, -1) |> should.be_none
 }
 
 pub fn exp_neg_test() {
@@ -142,7 +146,7 @@ pub fn exp_neg_test() {
   [0, 2, 4, 5, 6, 8]
   |> list.each(fn(number) {
     list.range(1, 5)
-    |> list.each(fn(exp) { m.exp(number, -exp, 10) |> should.equal(Error(Nil)) })
+    |> list.each(fn(exp) { m.exp(number, -exp, 10) |> should.be_none })
   })
 
   [1, 5, 7, 11]
@@ -154,14 +158,14 @@ pub fn exp_neg_test() {
   [0, 2, 3, 4, 6, 8, 9, 10]
   |> list.each(fn(number) {
     list.range(1, 5)
-    |> list.each(fn(exp) { m.exp(number, -exp, 12) |> should.equal(Error(Nil)) })
+    |> list.each(fn(exp) { m.exp(number, -exp, 12) |> should.be_none })
   })
 
   list.range(0, 20)
   |> list.each(fn(number) {
-    m.exp(number, -5, -1) |> should.equal(Error(Nil))
-    m.exp(number, -5, 0) |> should.equal(Error(Nil))
-    m.exp(number, -5, 1) |> should.equal(Error(Nil))
+    m.exp(number, -5, -1) |> should.be_none
+    m.exp(number, -5, 0) |> should.be_none
+    m.exp(number, -5, 1) |> should.be_none
   })
 }
 
@@ -194,19 +198,18 @@ pub fn jacobi_symbol_test() {
     list.range(0, prime - 1)
     |> list.each(fn(number) {
       m.jacobi_symbol(number, prime)
-      |> should.equal(Ok(m.legendre_symbol(number, prime)))
+      |> should.be_some
+      |> should.equal(m.legendre_symbol(number, prime))
     })
   })
 
   let odd = 15
   list.range(0, odd - 1)
   |> list.map(fn(number) { m.jacobi_symbol(number, odd) })
-  |> should.equal(
-    [0, 1, 1, 0, 1, 0, 0, -1, 1, 0, 0, -1, 0, -1, -1]
-    |> list.map(Ok),
-  )
+  |> list.map(should.be_some)
+  |> should.equal([0, 1, 1, 0, 1, 0, 0, -1, 1, 0, 0, -1, 0, -1, -1])
 
-  m.jacobi_symbol(13, 30) |> should.equal(Error(Nil))
-  m.jacobi_symbol(13, 2) |> should.equal(Error(Nil))
-  m.jacobi_symbol(13, -3) |> should.equal(Error(Nil))
+  m.jacobi_symbol(13, 30) |> should.be_none
+  m.jacobi_symbol(13, 2) |> should.be_none
+  m.jacobi_symbol(13, -3) |> should.be_none
 }

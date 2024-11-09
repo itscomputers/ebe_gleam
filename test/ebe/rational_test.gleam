@@ -1,4 +1,5 @@
 import ebe/rational.{type Rational}
+import gleam/option.{type Option}
 import gleam/order.{Eq, Gt, Lt}
 import gleeunit
 import gleeunit/should
@@ -9,38 +10,38 @@ pub fn main() {
 
 /// Constructor test
 pub fn new_test() {
-  rational.new(6, 7) |> assert_result_values(#(6, 7))
-  rational.new(-6, 7) |> assert_result_values(#(-6, 7))
-  rational.new(6, -7) |> assert_result_values(#(-6, 7))
-  rational.new(-6, -7) |> assert_result_values(#(6, 7))
+  rational.new(6, 7) |> assert_option_values(#(6, 7))
+  rational.new(-6, 7) |> assert_option_values(#(-6, 7))
+  rational.new(6, -7) |> assert_option_values(#(-6, 7))
+  rational.new(-6, -7) |> assert_option_values(#(6, 7))
 
-  rational.new(6, 8) |> assert_result_values(#(3, 4))
-  rational.new(-6, 8) |> assert_result_values(#(-3, 4))
-  rational.new(6, -8) |> assert_result_values(#(-3, 4))
-  rational.new(-6, -8) |> assert_result_values(#(3, 4))
+  rational.new(6, 8) |> assert_option_values(#(3, 4))
+  rational.new(-6, 8) |> assert_option_values(#(-3, 4))
+  rational.new(6, -8) |> assert_option_values(#(-3, 4))
+  rational.new(-6, -8) |> assert_option_values(#(3, 4))
 
-  rational.new(6, 9) |> assert_result_values(#(2, 3))
-  rational.new(-6, 9) |> assert_result_values(#(-2, 3))
-  rational.new(6, -9) |> assert_result_values(#(-2, 3))
-  rational.new(-6, -9) |> assert_result_values(#(2, 3))
+  rational.new(6, 9) |> assert_option_values(#(2, 3))
+  rational.new(-6, 9) |> assert_option_values(#(-2, 3))
+  rational.new(6, -9) |> assert_option_values(#(-2, 3))
+  rational.new(-6, -9) |> assert_option_values(#(2, 3))
 
-  rational.new(6, 6) |> assert_result_values(#(1, 1))
-  rational.new(-6, 6) |> assert_result_values(#(-1, 1))
-  rational.new(6, -6) |> assert_result_values(#(-1, 1))
-  rational.new(-6, -6) |> assert_result_values(#(1, 1))
+  rational.new(6, 6) |> assert_option_values(#(1, 1))
+  rational.new(-6, 6) |> assert_option_values(#(-1, 1))
+  rational.new(6, -6) |> assert_option_values(#(-1, 1))
+  rational.new(-6, -6) |> assert_option_values(#(1, 1))
 
-  rational.new(6, 2) |> assert_result_values(#(3, 1))
-  rational.new(-6, 2) |> assert_result_values(#(-3, 1))
-  rational.new(6, -2) |> assert_result_values(#(-3, 1))
-  rational.new(-6, -2) |> assert_result_values(#(3, 1))
+  rational.new(6, 2) |> assert_option_values(#(3, 1))
+  rational.new(-6, 2) |> assert_option_values(#(-3, 1))
+  rational.new(6, -2) |> assert_option_values(#(-3, 1))
+  rational.new(-6, -2) |> assert_option_values(#(3, 1))
 
-  rational.new(0, 2) |> assert_result_values(#(0, 1))
-  rational.new(-0, 2) |> assert_result_values(#(0, 1))
-  rational.new(0, -2) |> assert_result_values(#(0, 1))
-  rational.new(-0, -2) |> assert_result_values(#(0, 1))
+  rational.new(0, 2) |> assert_option_values(#(0, 1))
+  rational.new(-0, 2) |> assert_option_values(#(0, 1))
+  rational.new(0, -2) |> assert_option_values(#(0, 1))
+  rational.new(-0, -2) |> assert_option_values(#(0, 1))
 
-  rational.new(6, 0) |> should.equal(Error(Nil))
-  rational.new(-6, 0) |> should.equal(Error(Nil))
+  rational.new(6, 0) |> should.be_none
+  rational.new(-6, 0) |> should.be_none
 }
 
 /// Unsafe constructor test
@@ -85,10 +86,10 @@ pub fn from_int_test() {
 
 /// Construct from pair test
 pub fn from_pair_test() {
-  rational.from_pair(#(6, 9)) |> assert_result_values(#(2, 3))
-  rational.from_pair(#(-6, 9)) |> assert_result_values(#(-2, 3))
-  rational.from_pair(#(6, -9)) |> assert_result_values(#(-2, 3))
-  rational.from_pair(#(-6, -9)) |> assert_result_values(#(2, 3))
+  rational.from_pair(#(6, 9)) |> assert_option_values(#(2, 3))
+  rational.from_pair(#(-6, 9)) |> assert_option_values(#(-2, 3))
+  rational.from_pair(#(6, -9)) |> assert_option_values(#(-2, 3))
+  rational.from_pair(#(-6, -9)) |> assert_option_values(#(2, 3))
 }
 
 /// Comparison test
@@ -138,13 +139,13 @@ pub fn abs_test() {
 
 /// Reciprocoal test
 pub fn reciprocal_test() {
-  rational.frac(6, 9) |> rational.reciprocal |> assert_result_values(#(3, 2))
-  rational.frac(-6, 9) |> rational.reciprocal |> assert_result_values(#(-3, 2))
-  rational.frac(6, -9) |> rational.reciprocal |> assert_result_values(#(-3, 2))
-  rational.frac(-6, -9) |> rational.reciprocal |> assert_result_values(#(3, 2))
+  rational.frac(6, 9) |> rational.reciprocal |> assert_option_values(#(3, 2))
+  rational.frac(-6, 9) |> rational.reciprocal |> assert_option_values(#(-3, 2))
+  rational.frac(6, -9) |> rational.reciprocal |> assert_option_values(#(-3, 2))
+  rational.frac(-6, -9) |> rational.reciprocal |> assert_option_values(#(3, 2))
 
-  rational.frac(0, 6) |> rational.reciprocal |> should.equal(Error(Nil))
-  rational.frac(0, -6) |> rational.reciprocal |> should.equal(Error(Nil))
+  rational.frac(0, 6) |> rational.reciprocal |> should.be_none
+  rational.frac(0, -6) |> rational.reciprocal |> should.be_none
 }
 
 /// Addition test
@@ -208,19 +209,19 @@ pub fn multiply_test() {
 pub fn divide_test() {
   rational.frac(3, 4)
   |> rational.divide(rational.frac(15, 28))
-  |> assert_result_values(#(7, 5))
+  |> assert_option_values(#(7, 5))
 
   rational.frac(-3, 4)
   |> rational.divide(rational.frac(15, 28))
-  |> assert_result_values(#(-7, 5))
+  |> assert_option_values(#(-7, 5))
 
   rational.frac(3, 4)
   |> rational.divide(rational.frac(-15, 28))
-  |> assert_result_values(#(-7, 5))
+  |> assert_option_values(#(-7, 5))
 
   rational.frac(-3, 4)
   |> rational.divide(rational.frac(-15, 28))
-  |> assert_result_values(#(7, 5))
+  |> assert_option_values(#(7, 5))
 }
 
 /// Integer addition test
@@ -251,37 +252,39 @@ pub fn multiply_int_test() {
 pub fn divide_int_test() {
   rational.frac(10, 9)
   |> rational.divide_int(15)
-  |> assert_result_values(#(2, 27))
+  |> assert_option_values(#(2, 27))
   rational.frac(-10, 9)
   |> rational.divide_int(15)
-  |> assert_result_values(#(-2, 27))
+  |> assert_option_values(#(-2, 27))
   rational.frac(10, 9)
   |> rational.divide_int(-15)
-  |> assert_result_values(#(-2, 27))
+  |> assert_option_values(#(-2, 27))
   rational.frac(-10, 9)
   |> rational.divide_int(-15)
-  |> assert_result_values(#(2, 27))
+  |> assert_option_values(#(2, 27))
 }
 
 /// Integer floor division test
 pub fn floor_divide_int_test() {
   rational.frac(420, 69)
   |> rational.floor_divide_int(4)
-  |> should.equal(Ok(1))
+  |> should.be_some
+  |> should.equal(1)
 
   rational.frac(-420, 69)
   |> rational.floor_divide_int(4)
-  |> should.equal(Ok(-2))
+  |> should.be_some
+  |> should.equal(-2)
 }
 
 /// Integer modulo test
 pub fn modulo_int_test() {
   rational.frac(420, 69)
   |> rational.modulo_int(2)
-  |> assert_result_values(#(2, 23))
+  |> assert_option_values(#(2, 23))
   rational.frac(-420, 69)
   |> rational.modulo_int(2)
-  |> assert_result_values(#(44, 23))
+  |> assert_option_values(#(44, 23))
 }
 
 /// Floor test
@@ -333,7 +336,6 @@ fn assert_values(r: Rational, tuple: #(Int, Int)) {
 }
 
 /// Helper function to check values of a rational number result
-fn assert_result_values(res: Result(Rational, Nil), tuple: #(Int, Int)) {
-  let assert Ok(r) = res
-  assert_values(r, tuple)
+fn assert_option_values(opt: Option(Rational), tuple: #(Int, Int)) {
+  opt |> should.be_some |> assert_values(tuple)
 }

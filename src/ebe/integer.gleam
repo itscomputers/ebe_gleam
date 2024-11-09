@@ -3,6 +3,7 @@
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/order.{Eq, Gt, Lt}
 import gleam/pair
 
@@ -16,10 +17,10 @@ pub fn sgn(number: Int) -> Int {
 }
 
 /// Euclidean remainder
-pub fn rem(number: Int, by divisor: Int) -> Result(Int, Nil) {
+pub fn rem(number: Int, by divisor: Int) -> Option(Int) {
   case divisor == 0 {
-    True -> Nil |> Error
-    False -> number |> mod(by: divisor) |> Ok
+    True -> None
+    False -> number |> mod(by: divisor) |> Some
   }
 }
 
@@ -34,10 +35,10 @@ pub fn mod(number: Int, by divisor: Int) -> Int {
 }
 
 /// Euclidean quotient
-pub fn quo(number: Int, by divisor: Int) -> Result(Int, Nil) {
+pub fn quo(number: Int, by divisor: Int) -> Option(Int) {
   case divisor == 0 {
-    True -> Nil |> Error
-    False -> number |> div(by: divisor) |> Ok
+    True -> None
+    False -> number |> div(by: divisor) |> Some
   }
 }
 
@@ -50,10 +51,10 @@ pub fn div(number: Int, by divisor: Int) -> Int {
 }
 
 /// Euclidean division with remainder
-pub fn quo_rem(number: Int, by divisor: Int) -> Result(#(Int, Int), Nil) {
+pub fn quo_rem(number: Int, by divisor: Int) -> Option(#(Int, Int)) {
   case divisor == 0 {
-    True -> Nil |> Error
-    False -> number |> div_mod(by: divisor) |> Ok
+    True -> None
+    False -> number |> div_mod(by: divisor) |> Some
   }
 }
 
@@ -139,10 +140,10 @@ pub fn exp(number: Int, by exponent: Int) -> Int {
 }
 
 /// Integer logarithm
-pub fn log(number: Int, base: Int) -> Result(Int, Nil) {
+pub fn log(number: Int, base: Int) -> Option(Int) {
   case number >= 0, base > 1 {
-    True, True -> log_unsafe(number, base) |> Ok
-    _, _ -> Nil |> Error
+    True, True -> log_unsafe(number, base) |> Some
+    _, _ -> None
   }
 }
 
@@ -166,10 +167,10 @@ fn log_loop(number: Int, base: Int, exponent: Int) -> Int {
 
 /// p-adic representation
 /// returns #(exp, n) such that number == n * base ^ exp
-pub fn p_adic(number: Int, base: Int) -> Result(#(Int, Int), Nil) {
+pub fn p_adic(number: Int, base: Int) -> Option(#(Int, Int)) {
   case base > 1 {
-    True -> number |> p_adic_unsafe(base) |> Ok
-    False -> Error(Nil)
+    True -> number |> p_adic_unsafe(base) |> Some
+    False -> None
   }
 }
 
@@ -196,10 +197,10 @@ fn p_adic_loop(number: Int, base: Int, exponent: Int) -> #(Int, Int) {
 }
 
 /// Integer square root
-pub fn sqrt(number: Int) -> Result(Int, Nil) {
+pub fn sqrt(number: Int) -> Option(Int) {
   case number < 0 {
-    True -> Nil |> Error
-    False -> number |> sqrt_unsafe |> Ok
+    True -> None
+    False -> number |> sqrt_unsafe |> Some
   }
 }
 
@@ -220,9 +221,51 @@ fn sqrt_loop(number: Int, guess: Int) -> Int {
 
 /// Square property
 pub fn is_square(number: Int) -> Bool {
+  is_nonnegative(number) && is_square_mod_16(number) && has_exact_sqrt(number)
+}
+
+fn is_nonnegative(number: Int) -> Bool {
   number >= 0
-  && case number |> sqrt {
-    Ok(s) -> s |> exp(by: 2) == number
-    Error(Nil) -> False
+}
+
+fn is_square_mod_16(number: Int) -> Bool {
+  case number % 16 {
+    0 | 1 | 4 | 9 -> True
+    _ -> False
   }
+}
+
+fn has_exact_sqrt(number: Int) -> Bool {
+  case number |> sqrt {
+    Some(s) -> s |> exp(by: 2) == number
+    None -> False
+  }
+}
+
+pub fn root(number: Int, by degree: Int) -> Option(Int) {
+  case degree < 2 {
+    True -> None
+    False ->
+      case number < 0, degree % 2 == 0 {
+        True, True -> None
+        True, False -> -root_unsafe(-number, degree) |> Some
+        False, _ -> root_unsafe(number, degree) |> Some
+      }
+  }
+}
+
+pub fn root_unsafe(number: Int, by degree: Int) -> Int {
+  root_loop(number, degree, number + 1, number)
+}
+
+fn root_loop(number: Int, degree: Int, prev: Int, curr: Int) -> Int {
+  case prev > curr {
+    True ->
+      number |> root_loop(degree, curr, curr |> next_root_guess(number, degree))
+    False -> prev
+  }
+}
+
+fn next_root_guess(guess: Int, number: Int, degree: Int) -> Int {
+  { { degree - 1 } * guess + number / { exp(guess, degree - 1) } } / degree
 }

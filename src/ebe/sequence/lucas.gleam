@@ -1,5 +1,7 @@
 //// Lucas sequence
 
+import gleam/option.{type Option, None, Some}
+
 import ebe/integer
 
 /// Lucas sequence value
@@ -28,10 +30,10 @@ pub fn new(p: Int, q: Int) {
 }
 
 /// Construct new modular Lucas sequence
-pub fn new_mod(p: Int, q: Int, mod modulus: Int) -> Result(LucasSequence, Nil) {
+pub fn new_mod(p: Int, q: Int, mod modulus: Int) -> Option(LucasSequence) {
   case modulus > 1 {
-    True -> new_mod_unsafe(p, q, modulus) |> Ok
-    False -> Nil |> Error
+    True -> new_mod_unsafe(p, q, modulus) |> Some
+    False -> None
   }
 }
 
@@ -56,10 +58,10 @@ pub fn mod_at(
   q: Int,
   mod modulus: Int,
   index index: Int,
-) -> Result(LucasSequence, Nil) {
+) -> Option(LucasSequence) {
   case modulus > 1 {
-    True -> mod_at_unsafe(p, q, modulus, index) |> Ok
-    False -> Nil |> Error
+    True -> mod_at_unsafe(p, q, modulus, index) |> Some
+    False -> None
   }
 }
 

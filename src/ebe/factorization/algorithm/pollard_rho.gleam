@@ -1,64 +1,66 @@
 //// Pollard-rho divisor-finding algorithm
 
-import gleam/iterator.{type Iterator, Done, Next}
-
 import ebe/integer
 
-pub opaque type PollardRho {
-  PollardRho(number: Int, divisor: Int, iter: Iterator(State))
-}
-
-type State {
-  State(value_i: Int, value_2i: Int)
-}
-
-pub fn divisor(pr: PollardRho) -> Int {
-  pr.divisor
-}
-
-pub fn new(number: Int, seed: Int, function: fn(Int) -> Int) -> PollardRho {
-  PollardRho(
-    number: number,
-    divisor: 1,
-    iter: iterator.iterate(
-      new_state(number, seed, function),
-      iter_func(number, function),
-    ),
+pub opaque type State {
+  State(
+    number: Int,
+    divisor: Int,
+    value_i: Int,
+    value_2i: Int,
+    function: fn(Int) -> Int,
   )
 }
 
-pub fn step(pr: PollardRho) -> PollardRho {
-  case pr.divisor > 1 {
-    True -> PollardRho(..pr, iter: iterator.empty())
-    False ->
-      case pr.iter |> iterator.step {
-        Next(state, iter) ->
-          PollardRho(..pr, divisor: state |> get_divisor(pr.number), iter: iter)
-        Done -> pr
-      }
+pub fn new(number: Int, seed: Int, function: fn(Int) -> Int) -> State {
+  State(number: number, divisor: 1, value_i: 1, value_2i: 1, function: function)
+  |> set_initial_values(seed)
+  |> update_divisor
+}
+
+pub fn step(state: State) -> State {
+  case state.divisor > 1 {
+    True -> state
+    False -> state |> update_values |> update_divisor
   }
 }
 
-fn iter_func(number: Int, function: fn(Int) -> Int) -> fn(State) -> State {
-  fn(state: State) {
-    State(
-      value_i: state.value_i |> apply(number, function),
-      value_2i: state.value_2i
-        |> apply(number, function)
-        |> apply(number, function),
-    )
-  }
+pub fn number(state: State) -> Int {
+  state.number
 }
 
-fn new_state(number: Int, seed: Int, function: fn(Int) -> Int) -> State {
-  let value_i = seed |> apply(number, function)
-  State(value_i: value_i, value_2i: value_i |> apply(number, function))
+pub fn divisor(state: State) -> Int {
+  state.divisor
 }
 
-fn apply(value: Int, number: Int, function: fn(Int) -> Int) -> Int {
-  value |> integer.mod(number) |> function |> integer.mod(number)
+fn set_initial_values(state: State, seed: Int) -> State {
+  State(
+    ..state,
+    value_i: seed |> next_value(state),
+    value_2i: seed
+      |> next_value(state)
+      |> next_value(state),
+  )
 }
 
-fn get_divisor(state: State, number: Int) -> Int {
-  integer.gcd(state.value_i - state.value_2i, number)
+fn update_values(state: State) -> State {
+  State(
+    ..state,
+    value_i: state.value_i |> next_value(state),
+    value_2i: state.value_2i |> next_value(state) |> next_value(state),
+  )
+}
+
+fn update_divisor(state: State) -> State {
+  State(
+    ..state,
+    divisor: state.number |> integer.gcd(state.value_2i - state.value_i),
+  )
+}
+
+fn next_value(value: Int, state: State) -> Int {
+  value
+  |> integer.mod(state.number)
+  |> state.function
+  |> integer.mod(state.number)
 }

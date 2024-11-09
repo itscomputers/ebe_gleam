@@ -1,7 +1,8 @@
-//// Modular containing rational number functionality
+//// Rational number type
 
 import ebe/integer
 import gleam/int
+import gleam/option.{type Option, None, Some}
 import gleam/order.{type Order, Lt}
 
 /// Rational type
@@ -10,13 +11,10 @@ pub opaque type Rational {
 }
 
 /// Construct new rational number
-pub fn new(
-  numer numerator: Int,
-  denom denominator: Int,
-) -> Result(Rational, Nil) {
+pub fn new(numer numerator: Int, denom denominator: Int) -> Option(Rational) {
   case denominator {
-    0 -> Error(Nil)
-    _ -> frac(numerator, denominator) |> Ok
+    0 -> None
+    _ -> frac(numerator, denominator) |> Some
   }
 }
 
@@ -35,7 +33,7 @@ pub fn from_int(number: Int) -> Rational {
 }
 
 /// Construct from pair of integers
-pub fn from_pair(tuple: #(Int, Int)) -> Result(Rational, Nil) {
+pub fn from_pair(tuple: #(Int, Int)) -> Option(Rational) {
   new(tuple.0, tuple.1)
 }
 
@@ -82,10 +80,10 @@ pub fn abs(rational: Rational) -> Rational {
 }
 
 /// Build reciprocal of a rational number
-pub fn reciprocal(rational: Rational) -> Result(Rational, Nil) {
+pub fn reciprocal(rational: Rational) -> Option(Rational) {
   case rational.numer == 0 {
-    True -> Error(Nil)
-    False -> rational |> reciprocal_unsafe |> Ok
+    True -> None
+    False -> rational |> reciprocal_unsafe |> Some
   }
 }
 
@@ -115,10 +113,10 @@ pub fn multiply(rational: Rational, by other: Rational) -> Rational {
 }
 
 /// Divide a rational number by another rational number
-pub fn divide(rational: Rational, by other: Rational) -> Result(Rational, Nil) {
+pub fn divide(rational: Rational, by other: Rational) -> Option(Rational) {
   case other.numer == 0 {
-    True -> Nil |> Error
-    False -> rational |> divide_unsafe(by: other) |> Ok
+    True -> None
+    False -> rational |> divide_unsafe(by: other) |> Some
   }
 }
 
@@ -149,10 +147,10 @@ pub fn multiply_int(rational: Rational, by number: Int) -> Rational {
 }
 
 /// Divide a rational number by an integer
-pub fn divide_int(rational: Rational, by number: Int) -> Result(Rational, Nil) {
+pub fn divide_int(rational: Rational, by number: Int) -> Option(Rational) {
   case number {
-    0 -> Error(Nil)
-    _ -> rational |> divide_int_unsafe(by: number) |> Ok
+    0 -> None
+    _ -> rational |> divide_int_unsafe(by: number) |> Some
   }
 }
 
@@ -163,10 +161,10 @@ pub fn divide_int_unsafe(rational: Rational, by number: Int) -> Rational {
 }
 
 /// Floor division of rational number by an integer
-pub fn floor_divide_int(rational: Rational, by number: Int) -> Result(Int, Nil) {
+pub fn floor_divide_int(rational: Rational, by number: Int) -> Option(Int) {
   case number == 0 {
-    True -> Nil |> Error
-    False -> rational |> floor_divide_int_unsafe(by: number) |> Ok
+    True -> None
+    False -> rational |> floor_divide_int_unsafe(by: number) |> Some
   }
 }
 
@@ -177,10 +175,10 @@ pub fn floor_divide_int_unsafe(rational: Rational, by number: Int) -> Int {
 }
 
 /// Reduce a rational number modulo an integer
-pub fn modulo_int(rational: Rational, mod modulus: Int) -> Result(Rational, Nil) {
+pub fn modulo_int(rational: Rational, mod modulus: Int) -> Option(Rational) {
   case modulus > 1 {
-    True -> rational |> modulo_int_unsafe(mod: modulus) |> Ok
-    False -> Error(Nil)
+    True -> rational |> modulo_int_unsafe(mod: modulus) |> Some
+    False -> None
   }
 }
 
@@ -190,6 +188,13 @@ pub fn modulo_int_unsafe(rational: Rational, mod modulus: Int) -> Rational {
   rational
   |> floor_divide_int_unsafe(modulus)
   |> fn(floor) { rational |> subtract_int(floor * modulus) }
+}
+
+pub fn exp(rational: Rational, exponent: Int) -> Rational {
+  Rational(
+    rational.numer |> integer.exp(exponent),
+    rational.denom |> integer.exp(exponent),
+  )
 }
 
 /// Floor

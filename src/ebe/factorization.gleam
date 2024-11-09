@@ -35,7 +35,7 @@ fn factor_loop(number: Int) -> Option(Factorization) {
             True -> number |> prime_factor
             False ->
               number
-              |> algorithm.divisor
+              |> algorithm.find_divisor
               |> option.map(factor_loop)
               |> option.flatten
               |> option.map(fn(f) {
