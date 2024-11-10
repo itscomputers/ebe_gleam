@@ -149,7 +149,7 @@ fn prune(algorithms: List(Algorithm)) -> List(Algorithm) {
 }
 
 fn default_algorithms(number: Int) -> List(Algorithm) {
-  [default_rho, default_minus, default_plus, default_trivial]
+  [default_rho]
   |> list.map(fn(default) { default(number) })
   |> list.flatten
 }
@@ -160,7 +160,7 @@ fn default_rho(number: Int) -> List(Algorithm) {
 }
 
 fn default_minus(number: Int) -> List(Algorithm) {
-  [2]
+  [2, 3]
   |> list.map(fn(seed) { minus_one(number, seed) })
 }
 
@@ -170,5 +170,9 @@ fn default_plus(number: Int) -> List(Algorithm) {
 }
 
 fn default_trivial(number: Int) -> List(Algorithm) {
-  [trial_division(number), fermat(number)]
+  [trial_division(number)]
+}
+
+fn default_fermat(number: Int) -> List(Algorithm) {
+  [fermat(number)]
 }
