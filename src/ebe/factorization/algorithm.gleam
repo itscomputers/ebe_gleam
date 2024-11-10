@@ -149,24 +149,24 @@ fn prune(algorithms: List(Algorithm)) -> List(Algorithm) {
 }
 
 fn default_algorithms(number: Int) -> List(Algorithm) {
-  [default_rho]
+  [default_rho, default_plus]
   |> list.map(fn(default) { default(number) })
   |> list.flatten
 }
 
 fn default_rho(number: Int) -> List(Algorithm) {
   [2, 3, 4, 6, 7, 8, 9]
-  |> list.map(fn(seed) { rho(number, seed, fn(n) { n * n + 1 }) })
+  |> list.map(rho(number, _, fn(n) { n * n + 1 }))
 }
 
 fn default_minus(number: Int) -> List(Algorithm) {
   [2, 3]
-  |> list.map(fn(seed) { minus_one(number, seed) })
+  |> list.map(minus_one(number, _))
 }
 
 fn default_plus(number: Int) -> List(Algorithm) {
   [5, -7]
-  |> list.map(fn(seed) { plus_one(number, seed) })
+  |> list.map(plus_one(number, _))
 }
 
 fn default_trivial(number: Int) -> List(Algorithm) {

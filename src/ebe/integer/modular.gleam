@@ -66,7 +66,7 @@ pub fn exp(number: Int, by exponent: Int, mod modulus: Int) -> Option(Int) {
   case exponent < 0 {
     True ->
       exp(number, -exponent, modulus)
-      |> option.map(fn(power) { inv(power, modulus) })
+      |> option.map(inv(_, modulus))
       |> option.flatten
     False ->
       number

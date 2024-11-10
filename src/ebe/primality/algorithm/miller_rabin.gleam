@@ -125,7 +125,7 @@ fn deterministic_witnesses(number: Int) -> List(Witness) {
 fn random_witnesses(number: Int, count: Int) -> List(Witness) {
   random_set(lower: 2, upper: number - 1, count: count)
   |> set.to_list
-  |> list.map(fn(value) { Witness(value) })
+  |> list.map(Witness(_))
 }
 
 /// Set of count random elements between lower and upper inclusive
